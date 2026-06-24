@@ -1,0 +1,18 @@
+# Railway — https://docs.railway.com/reference/config-as-code
+#
+# 1. Add a MySQL database in the same project.
+# 2. On the web service, set:  DATABASE_URL = ${{MySQL.MYSQL_URL}}
+#    (Variables → Add reference → pick your MySQL service → MYSQL_URL)
+# 3. Set SESSION_SECRET to a long random string.
+# 4. First deploy only: run  node prisma/seed.js  once (Railway shell).
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "sh scripts/railway-start.sh"
+healthcheckPath = "/auth/login"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

@@ -20,6 +20,21 @@ npm run dev
 
 Open http://localhost:3000 — demo login: `admin@vcare.com` / `VCare@123`
 
+## Deploy (Railway) — recommended
+
+1. **New Project** → deploy from GitHub → `ColanApps/VCare`.
+2. **Add MySQL** in the same project (Database → MySQL).
+3. On the **web service** → **Variables**:
+   - `DATABASE_URL` = **`${{MySQL.MYSQL_URL}}`** (use *Add reference* → your MySQL service → `MYSQL_URL`)
+   - `SESSION_SECRET` = long random string
+   - `NODE_ENV` = `production`
+   - `SESSION_STORE` = `mysql`
+4. Deploy — [`railway.toml`](railway.toml) runs schema push then starts the server.
+5. **First deploy only** — Railway shell: `node prisma/seed.js`  
+   Demo login: `admin@vcare.com` / `VCare@123`
+
+Do **not** put database passwords in the repo. Use Railway variable references.
+
 ## Deploy (Render)
 
 1. Create a **Web Service** → **Docker** → repo [ColanApps/VCare](https://github.com/ColanApps/VCare).

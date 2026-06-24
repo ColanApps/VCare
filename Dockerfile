@@ -30,6 +30,8 @@ RUN npm ci --omit=dev --ignore-scripts \
   && npx prisma generate
 
 COPY --from=build /app/src ./src
+COPY scripts ./scripts
+RUN chmod +x scripts/railway-start.sh
 
 EXPOSE 3000
 
