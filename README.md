@@ -22,7 +22,19 @@ Open http://localhost:3000 — demo login: `admin@vcare.com` / `VCare@123`
 
 ## Deploy (Render)
 
-See [prisma/mysql-setup.md](prisma/mysql-setup.md) and [render.yaml](render.yaml).
+1. Create a **Web Service** → **Docker** → repo [ColanApps/VCare](https://github.com/ColanApps/VCare).
+2. Create or link a **MySQL** database and add **`DATABASE_URL`** to the web service environment (required).
+3. Set **Pre-Deploy Command**:
+   ```bash
+   npx prisma db push && node prisma/seed.js && node prisma/sync-permissions.js
+   ```
+   On later deploys you can drop `node prisma/seed.js` if data already exists.
+4. Set `SESSION_SECRET` (long random string) and `NODE_ENV=production`.
+5. Deploy — the Docker image only starts the Node server; schema runs in pre-deploy when `DATABASE_URL` is available.
+
+Or use the included [`render.yaml`](render.yaml) blueprint.
+
+See [prisma/mysql-setup.md](prisma/mysql-setup.md) for more detail.
 
 ## Scripts
 

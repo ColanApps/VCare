@@ -54,12 +54,17 @@ mysql://user:pass@host:3306/vcare_erp?sslaccept=strict
 
 Or set `MYSQL_SSL=true` for the session store. Use `MYSQL_SSL_REJECT_UNAUTHORIZED=false` only if your host uses a self-signed cert.
 
-### Notes for Render
+### Render (Docker)
 
-- Render’s managed databases are often **PostgreSQL**; if you use Postgres you would need a different Prisma provider. This project is configured for **MySQL** as requested.
-- Use an external MySQL host that allows connections from Render’s outbound IPs, or a Render-compatible MySQL add-on.
-- File uploads use `UPLOAD_DIR`; mount a persistent disk on Render or move to S3 for multi-instance deploys.
-- Sessions live in the `express_sessions` table in the same database — no separate session store.
+1. Web Service → **Docker** → this repo’s `Dockerfile`.
+2. Add **`DATABASE_URL`** (`mysql://...`) from your MySQL provider to the service **Environment** tab.
+3. **Pre-Deploy Command** (runs with env vars, before traffic switches):
+   ```bash
+   npx prisma db push && node prisma/seed.js && node prisma/sync-permissions.js
+   ```
+4. The container **start command** is only `node src/server.js` — do not run `prisma db push` in the Dockerfile `CMD`.
+
+If you see `Environment variable not found: DATABASE_URL`, the web service is missing `DATABASE_URL` or pre-deploy/migrations were wired into container start instead of pre-deploy.
 
 ## Commands
 

@@ -24,7 +24,7 @@ ENV NODE_ENV=production
 COPY package*.json ./
 COPY prisma ./prisma
 
-# Prod deps + Prisma CLI for db push at container start
+# Prod deps + Prisma CLI (used by Render pre-deploy, not container start)
 RUN npm ci --omit=dev --ignore-scripts \
   && npm install prisma@6.9.0 --no-save \
   && npx prisma generate
@@ -33,5 +33,6 @@ COPY --from=build /app/src ./src
 
 EXPOSE 3000
 
-# Seed once via Render release command — not on every container start
-CMD ["sh", "-c", "npx prisma db push && node prisma/sync-permissions.js && node src/server.js"]
+# Migrations: run via Render pre-deploy command (needs DATABASE_URL there).
+# Do not run prisma here — env vars may be missing and it blocks every boot.
+CMD ["node", "src/server.js"]

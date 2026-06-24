@@ -1,15 +1,16 @@
-# Render Blueprint — Web Service + external MySQL DATABASE_URL
-# Link a MySQL database (Render, PlanetScale, Railway, etc.) and set DATABASE_URL on the web service.
+# Render Blueprint — Docker web service + external MySQL DATABASE_URL
+#
+# 1. Create/link a MySQL database and set DATABASE_URL on this service.
+# 2. First deploy: pre-deploy runs db:push + seed + sync-permissions.
 
 services:
   - type: web
     name: vcare-erp
-    runtime: node
+    runtime: docker
+    dockerfilePath: ./Dockerfile
     plan: starter
-    buildCommand: npm install && npm run build
-    releaseCommand: npm run db:push && npm run db:seed && npm run db:sync-permissions
-    startCommand: npm start
     healthCheckPath: /auth/login
+    preDeployCommand: npx prisma db push && node prisma/seed.js && node prisma/sync-permissions.js
     envVars:
       - key: NODE_ENV
         value: production
