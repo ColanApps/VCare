@@ -1,0 +1,46 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Support Tickets') %}
+{% endcall %}
+
+<div class="erp-card erp-table-card">
+  <div class="erp-card-header">
+    <h3 class="font-semibold text-slate-900">Recent Tickets</h3>
+    <span class="text-xs text-slate-500">{{ tickets | length }} shown</span>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>Ticket No</th>
+          <th>Title</th>
+          <th>Category</th>
+          <th>Priority</th>
+          <th>Branch</th>
+          <th>Assigned To</th>
+          <th>Status</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in tickets %}
+        <tr>
+          <td class="font-mono text-xs">{{ t.ticketNo }}</td>
+          <td class="font-medium">{{ t.title }}</td>
+          <td><span class="erp-badge-neutral">{{ t.category }}</span></td>
+          <td>{{ statusBadge(t.priority) }}</td>
+          <td>{% if t.branch %}{{ t.branch.name }}{% else %}—{% endif %}</td>
+          <td>{% if t.assignedTo %}{{ t.assignedTo.firstName }} {{ t.assignedTo.lastName }}{% else %}<span class="text-slate-400">Unassigned</span>{% endif %}</td>
+          <td>{{ statusBadge(t.status) }}</td>
+          <td class="text-xs text-slate-500">{{ t.createdAt | date }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="erp-empty-cell">No tickets found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,136 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Pharmacy Billing') %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2">
+    <form method="POST" action="/billing/pharmacy" id="pharmacy-form">
+      <div class="erp-card mb-6 erp-table-card">
+        <div class="erp-card-header"><h3 class="font-semibold">Bill Details</h3></div>
+        <div class="erp-card-body erp-form-grid">
+          <div>
+            <label class="erp-label">Customer *</label>
+            <select name="customerId" class="erp-select" required>
+              <option value="">Select customer</option>
+              {% for c in customers %}
+              <option value="{{ c.id }}">{{ c.firstName }} {{ c.lastName }} ({{ c.uhid }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="erp-label">Payment Mode</label>
+            <select name="paymentMode" class="erp-select">
+              <option value="CASH">Cash</option>
+              <option value="CARD">Card</option>
+              <option value="UPI">UPI</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="erp-card erp-table-card">
+        <div class="erp-card-header"><h3 class="font-semibold">Pharmacy Products</h3></div>
+        <div class="erp-card-body">
+          <div class="flex flex-wrap gap-2 mb-4 p-3 bg-slate-50 rounded-lg">
+            <select id="product-select" class="erp-select text-sm flex-1 min-w-[200px]">
+              {% for p in products %}
+              <option value="{{ p.sku }}|{{ p.name }}|{{ p.mrp }}|{{ p.id }}">{{ p.name }} — {{ p.mrp | currency }}</option>
+              {% endfor %}
+            </select>
+            <input type="number" id="item-qty" class="erp-input w-20 text-sm" value="1" min="1">
+            <button type="button" onclick="addPharmacyItem()" class="erp-btn-secondary text-sm">Add</button>
+          </div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+            <thead><tr><th>Product</th><th>SKU</th><th>Qty</th><th>MRP</th><th>Total</th><th></th></tr></thead>
+            <tbody id="pharmacy-items-body">
+              <tr><td colspan="6" class="erp-empty-cell">Add products to bill</td></tr>
+            </tbody>
+          </table>
+          <input type="hidden" name="items" id="pharmacy-items-json" value="[]">
+        </div>
+      </div>
+
+      <div class="erp-card mt-6">
+        <div class="erp-card-body flex items-center justify-between">
+          <div>
+            <div class="text-sm text-slate-500">Bill Total</div>
+            <div class="text-2xl font-semibold" id="pharmacy-total">₹0</div>
+          </div>
+          <div class="flex gap-4 items-end">
+            <div>
+              <label class="erp-label">Paid Amount</label>
+              <input type="number" name="paidAmount" id="paid-amount" class="erp-input w-32" step="0.01" value="0">
+            </div>
+            <button type="submit" class="erp-btn-primary">Generate Pharmacy Bill</button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="erp-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Recent Pharmacy Bills</h3></div>
+    <div class="divide-y divide-surface-border">
+      {% for b in recentBills %}
+      <a href="/billing/{{ b.id }}" class="block p-4 hover:bg-slate-50 transition">
+        <div class="flex justify-between">
+          <span class="font-mono text-xs font-medium">{{ b.billNo }}</span>
+          {{ statusBadge(b.status) }}
+        </div>
+        <div class="text-sm mt-1">{{ b.customer.firstName }} {{ b.customer.lastName }}</div>
+        <div class="text-sm font-medium mt-1">{{ b.totalAmount | currency }}</div>
+      </a>
+      {% else %}
+      <div class="p-6 text-center text-slate-400">No pharmacy bills yet</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const pharmacyItems = [];
+
+function addPharmacyItem() {
+  const [sku, name, mrp, productId] = document.getElementById('product-select').value.split('|');
+  const quantity = parseInt(document.getElementById('item-qty').value, 10) || 1;
+  pharmacyItems.push({ productId, itemType: 'PRODUCT', itemCode: sku, itemName: name, quantity, unitPrice: parseFloat(mrp), taxRate: 12 });
+  renderPharmacyItems();
+}
+
+function removePharmacyItem(index) {
+  pharmacyItems.splice(index, 1);
+  renderPharmacyItems();
+}
+
+function renderPharmacyItems() {
+  const tbody = document.getElementById('pharmacy-items-body');
+  const input = document.getElementById('pharmacy-items-json');
+  let total = 0;
+  if (pharmacyItems.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="erp-empty-cell">Add products to bill</td></tr>';
+  } else {
+    tbody.innerHTML = pharmacyItems.map((item, i) => {
+      const line = item.quantity * item.unitPrice * 1.12;
+      total += line;
+      return `<tr>
+        <td class="font-medium">${item.itemName}</td>
+        <td class="font-mono text-xs">${item.itemCode}</td>
+        <td>${item.quantity}</td>
+        <td>₹${item.unitPrice.toLocaleString('en-IN')}</td>
+        <td>₹${line.toLocaleString('en-IN', {maximumFractionDigits: 2})}</td>
+        <td><button type="button" onclick="removePharmacyItem(${i})" class="text-red-500 text-xs">Remove</button></td>
+      </tr>`;
+    }).join('');
+  }
+  input.value = JSON.stringify(pharmacyItems);
+  document.getElementById('pharmacy-total').textContent = '₹' + total.toLocaleString('en-IN', {maximumFractionDigits: 2});
+  document.getElementById('paid-amount').value = Math.round(total * 100) / 100;
+}
+</script>
+{% endblock %}

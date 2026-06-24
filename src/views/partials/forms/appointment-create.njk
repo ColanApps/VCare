@@ -1,0 +1,63 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/appointments/create" class="erp-modal-form"
+  hx-post="/appointments/create" hx-swap="none">
+  <div class="erp-form-grid">
+    <div class="erp-field sm:col-span-2">
+      <label class="erp-label">Customer *</label>
+      <select name="customerId" class="erp-select" required>
+        <option value="">Select customer</option>
+        {% for c in customers %}
+        <option value="{{ c.id }}" {% if preselectedCustomer == c.id %}selected{% endif %}>{{ c.firstName }} {{ c.lastName }} ({{ c.uhid }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Branch</label>
+      <select name="branchId" class="erp-select">{% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Consultant</label>
+      <select name="consultantId" class="erp-select">
+        <option value="">Any available</option>
+        {% for c in consultants %}<option value="{{ c.id }}">{{ c.firstName }} {{ c.lastName }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Treatment</label>
+      <select name="treatmentId" class="erp-select">
+        <option value="">None</option>
+        {% for t in treatments %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Type</label>
+      <select name="type" class="erp-select">
+        <option value="CONSULTATION">Consultation</option><option value="TREATMENT">Treatment</option>
+        <option value="PROCEDURE">Procedure</option><option value="FOLLOW_UP">Follow Up</option>
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Category</label>
+      <select name="category" class="erp-select"><option value="HAIR">Hair</option><option value="SKIN">Skin</option></select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Date & Time *</label>
+      <input type="datetime-local" name="scheduledAt" class="erp-input" required>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Duration (mins)</label>
+      <input type="number" name="duration" class="erp-input" value="30">
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Source</label>
+      <select name="source" class="erp-select">
+        <option value="WALK_IN">Walk-in</option><option value="CALL_CENTER">Call Center</option>
+        <option value="ONLINE">Online</option><option value="REFERRAL">Referral</option>
+      </select>
+    </div>
+    <div class="erp-field"><label class="erp-label">Lead Source</label><input type="text" name="leadSource" class="erp-input"></div>
+    <div class="erp-field"><label class="erp-label">Campaign</label><input type="text" name="campaign" class="erp-input"></div>
+    <div class="erp-field sm:col-span-2"><label class="erp-label">Notes</label><textarea name="notes" class="erp-input" rows="2"></textarea></div>
+  </div>
+  {{ formFooter('/appointments') }}
+</form>

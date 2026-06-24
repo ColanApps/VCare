@@ -1,0 +1,72 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Before/After Photos') %}
+{% endcall %}
+
+<div class="erp-card mb-6">
+  <div class="erp-card-header"><h3 class="font-semibold">Upload Photo</h3></div>
+  <form method="POST" action="/customer/photos/upload" enctype="multipart/form-data" class="erp-card-body">
+    <div class="erp-form-grid">
+      <div>
+        <label class="erp-label">Customer *</label>
+        <select name="customerId" class="erp-select" required>
+          <option value="">Select customer</option>
+          {% for c in customers %}<option value="{{ c.id }}">{{ c.firstName }} {{ c.lastName }} ({{ c.uhid }})</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Photo Type *</label>
+        <select name="type" class="erp-select" required>
+          <option value="BEFORE">Before</option>
+          <option value="AFTER">After</option>
+          <option value="PROCEDURE_PRE">Procedure Pre</option>
+          <option value="PROCEDURE_POST">Procedure Post</option>
+          <option value="PROCEDURE_POST_HT">Procedure Post HT</option>
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Photo File *</label>
+        <input type="file" name="photo" accept="image/*" class="erp-input" required>
+      </div>
+      <div>
+        <label class="erp-label">Caption</label>
+        <input type="text" name="caption" class="erp-input" placeholder="Optional caption">
+      </div>
+    </div>
+    <input type="hidden" name="redirect" value="/customer/photos">
+    <div class="mt-4">
+      <button type="submit" class="erp-btn-primary">Upload Photo</button>
+    </div>
+  </form>
+</div>
+
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+  {% for photo in photos %}
+  <div class="erp-card overflow-hidden group">
+    <div class="aspect-square bg-slate-100 flex items-center justify-center relative">
+      {% if photo.filePath %}
+      <img src="{{ photo.filePath }}" alt="{{ photo.caption or photo.type }}" class="w-full h-full object-cover">
+      {% else %}
+      <div class="text-slate-400 text-center p-4">
+        <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <span class="text-xs">{{ photo.type }}</span>
+      </div>
+      {% endif %}
+      <span class="absolute top-2 left-2 erp-badge-neutral text-[10px]">{{ photo.type }}</span>
+    </div>
+    <div class="p-3">
+      <a href="/customer/{{ photo.customer.id }}" class="text-sm font-medium hover:underline">{{ photo.customer.firstName }} {{ photo.customer.lastName }}</a>
+      <div class="text-[10px] text-slate-400 font-mono">{{ photo.customer.uhid }}</div>
+      {% if photo.caption %}<p class="text-xs text-slate-500 mt-1">{{ photo.caption }}</p>{% endif %}
+      <div class="text-[10px] text-slate-400 mt-1">{{ photo.takenAt | date }}</div>
+      <form method="POST" action="/customer/photos/{{ photo.id }}/delete" class="mt-2" onsubmit="return confirm('Remove this photo?')">
+        <button type="submit" class="text-xs text-red-600 hover:underline">Remove</button>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-span-full erp-card"><div class="erp-card-body text-center text-slate-400 py-12">No photos uploaded yet</div></div>
+  {% endfor %}
+</div>
+{% endblock %}

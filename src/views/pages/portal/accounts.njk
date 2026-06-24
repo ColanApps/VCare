@@ -1,0 +1,111 @@
+{% extends "layouts/portal.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar, hubTile %}
+{% block content %}
+{% call pageToolbar('Accounts Portal', period.start | date ~ ' – ' ~ period.end | date) %}
+{% endcall %}
+
+<div class="erp-kpi-grid">
+  <div class="erp-kpi"><div class="erp-kpi-label">Month Billed</div><div class="erp-kpi-value mt-1">{{ monthBilled | currency }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Collected</div><div class="erp-kpi-value mt-1 text-emerald-600">{{ monthCollected | currency }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">GST (Month)</div><div class="erp-kpi-value mt-1">{{ monthGst | currency }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Outstanding</div><div class="erp-kpi-value mt-1 text-amber-600">{{ outstanding | currency }}</div></div>
+</div>
+
+<h2 class="erp-section-title">Workflows</h2>
+<div class="erp-hub-grid mb-8">
+  {{ hubTile('/billing/payments', 'Payments', 'Payment register and recent receipts') }}
+  {{ hubTile('/billing/advances', 'Advances', 'Advance receipts and balances applied to bills') }}
+  {{ hubTile('/reports/gst', 'GST Reports', 'Output GST summary and filing registers') }}
+  {{ hubTile('/finance/day-close', 'Day Close', 'Reconcile bills, cash, deposits & DTR for the business day') }}
+  {{ hubTile('/finance/ar-aging', 'AR Aging', '30 / 60 / 90 / 120+ day buckets with collect links') }}
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header flex justify-between">
+      <h3 class="font-semibold">Recent Payments</h3>
+      <a href="/billing/payments" class="text-xs text-accent-600">View all</a>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="erp-table text-sm">
+        <thead><tr><th>Bill</th><th>Customer</th><th>Amount</th><th>Mode</th></tr></thead>
+        <tbody>
+          {% for p in recentPayments %}
+          <tr>
+            <td class="font-mono text-xs">{{ p.bill.billNo }}</td>
+            <td>{{ p.bill.customer.firstName }} {{ p.bill.customer.lastName }}</td>
+            <td class="text-emerald-600 font-medium">{{ p.amount | currency }}</td>
+            <td><span class="erp-badge-neutral">{{ p.paymentMode }}</span></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="erp-empty-cell">No payments</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="erp-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Finance Summary</h3></div>
+    <div class="erp-card-body space-y-4">
+      <div class="flex justify-between"><span class="text-slate-500">Bills this month</span><span class="font-medium">{{ billCount }}</span></div>
+      <div class="flex justify-between"><span class="text-slate-500">Outstanding bills</span><span class="font-medium text-amber-600">{{ outstandingBills }}</span></div>
+      <div class="flex justify-between"><span class="text-slate-500">Active advances</span><span class="font-medium">{{ advanceBalance | currency }} ({{ advanceCount }})</span></div>
+      <div class="pt-4 border-t flex gap-2">
+        <a href="/reports/gst" class="erp-btn-secondary text-sm">GST Reports</a>
+        <a href="/billing/advances" class="erp-btn-secondary text-sm">Advances</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if creditNotes | length > 0 %}
+<div class="erp-card erp-table-card mt-6">
+  <div class="erp-card-header"><h3 class="font-semibold">Recent Credit Notes</h3></div>
+  <div class="overflow-x-auto">
+    <table class="erp-table text-sm">
+      <thead><tr><th>CN No</th><th>Bill</th><th>Amount</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for cn in creditNotes %}
+        <tr>
+          <td class="font-mono text-xs">{{ cn.creditNoteNo }}</td>
+          <td>{{ cn.bill.billNo }}</td>
+          <td>{{ cn.amount | currency }}</td>
+          <td>{{ statusBadge(cn.status) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if outstandingBillList | length > 0 %}
+<div class="erp-card erp-table-card mt-6">
+  <div class="erp-card-header"><h3 class="font-semibold">Collect Outstanding</h3></div>
+  <div class="overflow-x-auto">
+    <table class="erp-table text-sm">
+      <thead><tr><th>Bill</th><th>Customer</th><th>Balance</th><th>Collect</th></tr></thead>
+      <tbody>
+        {% for b in outstandingBillList %}
+        <tr>
+          <td class="font-mono text-xs"><a href="/billing/{{ b.id }}" class="text-accent-600">{{ b.billNo }}</a></td>
+          <td>{{ b.customer.firstName }} {{ b.customer.lastName }}</td>
+          <td class="font-medium text-amber-600">{{ b.balanceAmount | currency }}</td>
+          <td>
+            <form method="POST" action="/portal/accounts/collect" class="flex gap-1 items-center">
+              <input type="hidden" name="billId" value="{{ b.id }}">
+              <input type="number" name="amount" class="erp-input text-xs w-24" max="{{ b.balanceAmount }}" step="0.01" required>
+              <select name="paymentMode" class="erp-select text-xs"><option value="CASH">Cash</option><option value="UPI">UPI</option><option value="BANK_TRANSFER">Bank</option></select>
+              <button type="submit" class="erp-btn-primary text-xs px-2 py-1">Record</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,47 @@
+{% from "partials/nav-icon.njk" import navIcon %}
+<aside class="erp-rail" :class="{ 'erp-rail-mobile-open': mobileNav }">
+  <div class="erp-rail-logo">
+    <div class="erp-rail-logo-mark">
+      <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+    </div>
+  </div>
+  <nav class="erp-rail-nav">
+    {% for section in navigation %}
+    <button type="button"
+      class="erp-rail-btn"
+      :class="{ 'active': activeModule === '{{ section.id }}' }"
+      @click="setModule('{{ section.id }}')"
+      title="{{ section.label }}">
+      {{ navIcon(section.icon) }}
+    </button>
+    {% endfor %}
+  </nav>
+</aside>
+
+<aside class="erp-subnav" :class="{ 'erp-subnav-open': mobileNav }">
+  <div class="erp-subnav-header">
+  {% for section in navigation %}
+    <template x-if="activeModule === '{{ section.id }}'">
+      <span class="erp-subnav-pill">{{ section.label }}</span>
+    </template>
+  {% endfor %}
+  </div>
+  <nav class="erp-subnav-links">
+    {% for section in navigation %}
+    <div x-show="activeModule === '{{ section.id }}'" x-cloak class="space-y-0.5">
+      {% for item in section.children %}
+      {% if item.isGroup %}
+      <div class="erp-subnav-group">{{ item.label }}</div>
+      {% for sub in item.children %}
+      <a href="{{ sub.path }}" class="erp-subnav-link {% if currentPath == sub.path.split('?')[0] %}active{% endif %}" @click="mobileNav = false">{{ sub.label }}</a>
+      {% endfor %}
+      {% else %}
+      <a href="{{ item.path }}" class="erp-subnav-link {% if currentPath == item.path.split('?')[0] %}active{% endif %}" @click="mobileNav = false">{{ item.label }}</a>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </nav>
+</aside>
+
+<div class="erp-mobile-backdrop" x-show="mobileNav" x-cloak @click="mobileNav = false"></div>

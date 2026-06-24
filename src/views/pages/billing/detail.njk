@@ -1,0 +1,369 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% set billSubtitle %}{{ bill.billDate | datetime }} · {{ bill.branch.name }}{% if bill.source == 'B2B' %} · B2B{% endif %}{% endset %}
+{% call pageToolbar('Bill ' ~ bill.billNo, billSubtitle) %}
+  <a href="/billing/{{ bill.id }}/pdf" class="erp-btn-secondary text-sm" target="_blank">Download PDF</a>
+  <a href="/billing/{{ bill.id }}/print" class="erp-btn-secondary text-sm" target="_blank">Print</a>
+  {{ statusBadge(bill.status) }}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2 space-y-6">
+    <div class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Customer</h3></div>
+      <div class="erp-card-body">
+        <a href="/customer/{{ bill.customer.id }}" class="font-semibold text-accent-600 hover:underline">{{ bill.customer.firstName }} {{ bill.customer.lastName }}</a>
+        <div class="text-sm text-slate-500 mt-1">{{ bill.customer.uhid }} · {{ bill.customer.phone }}{% if bill.customer.gstin %} · GSTIN {{ bill.customer.gstin }}{% endif %}</div>
+        {% if bill.buyerGstin or bill.poReference %}
+        <div class="text-xs text-slate-500 mt-2">{% if bill.poReference %}PO: {{ bill.poReference }}{% endif %}{% if bill.buyerGstin %} · Buyer GSTIN: {{ bill.buyerGstin }}{% endif %}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="erp-card erp-table-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Line Items</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+        <thead>
+          <tr><th>Item</th><th>Code</th><th>Qty</th><th>Unit Price</th><th>Discount</th><th>Tax</th><th>Total</th></tr>
+        </thead>
+        <tbody>
+          {% for item in bill.items %}
+          <tr>
+            <td class="font-medium">{{ item.itemName }}</td>
+            <td class="font-mono text-xs">{{ item.itemCode }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>{{ item.unitPrice | currency }}</td>
+            <td>{{ item.discount | currency }}</td>
+            <td>{{ item.taxAmount | currency }}</td>
+            <td class="font-medium">{{ item.totalAmount | currency }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr class="bg-slate-50">
+            <td colspan="6" class="text-right font-medium">Subtotal</td>
+            <td class="font-medium">{{ bill.subtotal | currency }}</td>
+          </tr>
+          {% if bill.discount > 0 %}
+          <tr class="bg-slate-50">
+            <td colspan="6" class="text-right">Discount</td>
+            <td class="text-red-600">-{{ bill.discount | currency }}</td>
+          </tr>
+          {% endif %}
+          <tr class="bg-slate-50">
+            <td colspan="6" class="text-right">Tax</td>
+            <td>{{ bill.taxAmount | currency }}</td>
+          </tr>
+          <tr class="bg-slate-50 font-semibold">
+            <td colspan="6" class="text-right">Total</td>
+            <td>{{ bill.totalAmount | currency }}</td>
+          </tr>
+        </tfoot>
+      </table>
+      </div>
+    </div>
+
+    {% if bill.payments | length > 0 %}
+    <div class="erp-card erp-table-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Payment History</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+        <thead><tr><th>Date</th><th>Amount</th><th>Mode</th><th>Reference</th><th></th></tr></thead>
+        <tbody>
+          {% for p in bill.payments %}
+          <tr>
+            <td class="text-xs">{{ p.paymentDate | datetime }}</td>
+            <td class="font-medium text-emerald-600">{{ p.amount | currency }}</td>
+            <td><span class="erp-badge-neutral">{{ p.paymentMode }}</span></td>
+            <td class="font-mono text-xs">{{ p.referenceNo or '—' }}</td>
+            <td><a href="/finance/receipt/{{ p.id }}" class="text-xs text-accent-600" target="_blank">Receipt</a>
+              <a href="/finance/receipt/{{ p.id }}/pdf" class="text-xs text-slate-500 hover:text-accent-600 ml-1" target="_blank">PDF</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="space-y-6">
+    <div class="erp-card">
+      <div class="erp-card-body space-y-3">
+        <div class="flex justify-between"><span class="text-slate-500">Paid</span><span class="font-medium text-emerald-600">{{ bill.paidAmount | currency }}</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Balance</span><span class="font-medium {% if bill.balanceAmount > 0 %}text-amber-600{% endif %}">{{ bill.balanceAmount | currency }}</span></div>
+        <div class="flex justify-between text-sm"><span class="text-slate-500">Created by</span><span>{{ bill.createdBy.firstName }} {{ bill.createdBy.lastName }}</span></div>
+      </div>
+    </div>
+
+    {% if bill.balanceAmount > 0 and advances and advances.length > 0 %}
+    <div class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Apply Advance</h3></div>
+      <form method="POST" action="/billing/advances/apply" class="erp-card-body space-y-4">
+        <input type="hidden" name="billId" value="{{ bill.id }}">
+        <div>
+          <label class="erp-label">Advance Receipt</label>
+          <select name="advanceId" class="erp-select" required>
+            {% for a in advances %}
+            <option value="{{ a.id }}">{{ a.receiptNo }} — Balance {{ a.balanceAmount | currency }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="erp-label">Amount to Apply</label>
+          <input type="number" name="amount" class="erp-input" step="0.01" max="{{ bill.balanceAmount }}" value="{{ bill.balanceAmount }}" required>
+        </div>
+        <button type="submit" class="erp-btn-secondary w-full">Apply Advance</button>
+      </form>
+    </div>
+    {% endif %}
+
+    {% if bill.balanceAmount > 0 %}
+    <div class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Record Payment</h3></div>
+      <form method="POST" action="/billing/{{ bill.id }}/payment" class="erp-card-body space-y-4">
+        <div>
+          <label class="erp-label">Amount</label>
+          <input type="number" name="amount" class="erp-input" step="0.01" max="{{ bill.balanceAmount }}" value="{{ bill.balanceAmount }}" required data-currency>
+        </div>
+        <div>
+          <label class="erp-label">Payment Mode</label>
+          <select name="paymentMode" class="erp-select" required>
+            <option value="CASH">Cash</option>
+            <option value="CARD">Card</option>
+            <option value="UPI">UPI</option>
+            <option value="BANK_TRANSFER">Bank Transfer</option>
+            <option value="CHEQUE">Cheque</option>
+          </select>
+        </div>
+        <div>
+          <label class="erp-label">Reference No</label>
+          <input type="text" name="referenceNo" class="erp-input" placeholder="Txn/Cheque reference">
+        </div>
+        <button type="submit" class="erp-btn-primary w-full">Record Payment</button>
+        <label class="flex items-center gap-2 text-sm text-slate-600 mt-2">
+          <input type="checkbox" name="printReceipt" value="on" class="rounded"> Print receipt voucher
+        </label>
+      </form>
+    </div>
+    {% endif %}
+
+    {% if bill.balanceAmount > 0 and not activeLoan %}
+    <div class="erp-card" x-data="loanCalculator()">
+      <div class="erp-card-header"><h3 class="font-semibold">Installment Plan</h3></div>
+      <form method="POST" action="/billing/{{ bill.id }}/installment-plan" class="erp-card-body space-y-4">
+        <p class="text-sm text-slate-500">Convert balance of <strong>{{ bill.balanceAmount | currency }}</strong> into EMIs</p>
+        <div>
+          <label class="erp-label">Finance Provider</label>
+          <select name="provider" class="erp-select" x-model="provider" @change="calcEmi({{ bill.balanceAmount }})">
+            <option value="INTERNAL">Internal EMI</option>
+            <option value="BAJAJ">Bajaj Finserv (3rd party)</option>
+          </select>
+        </div>
+        <div x-show="provider === 'BAJAJ'" x-cloak>
+          <label class="erp-label">Bajaj Application / Ref No</label>
+          <input type="text" name="externalRefNo" class="erp-input" placeholder="Bajaj loan application reference">
+        </div>
+        <div><label class="erp-label">Interest % p.a.</label><input type="number" name="interestRate" class="erp-input" value="12" x-model.number="rate" @input="calcEmi({{ bill.balanceAmount }})"></div>
+        <div><label class="erp-label">Tenure (months)</label><input type="number" name="tenureMonths" class="erp-input" value="6" x-model.number="tenure" @input="calcEmi({{ bill.balanceAmount }})"></div>
+        <div class="p-3 bg-accent-50 rounded-lg text-sm flex justify-between"><span>Estimated EMI</span><span class="font-semibold" x-text="emiDisplay"></span></div>
+        <input type="hidden" name="autoApprove" value="on">
+        <button type="submit" class="erp-btn-primary w-full">Create & Approve Plan</button>
+      </form>
+    </div>
+    {% endif %}
+
+    {% if activeLoan %}
+    <div class="erp-card">
+      <div class="erp-card-header flex justify-between">
+        <h3 class="font-semibold">Installment Plan{% if activeLoan.provider === 'BAJAJ' %} — Bajaj{% endif %}</h3>
+        <span class="font-mono text-xs">{{ activeLoan.loanNo }}</span>
+      </div>
+      <div class="erp-card-body">
+        <div class="grid grid-cols-2 gap-2 text-sm mb-4">
+          <div><span class="text-slate-500">EMI</span><div class="font-medium">{{ activeLoan.emiAmount | currency }}</div></div>
+          <div><span class="text-slate-500">Status</span><div>{{ statusBadge(activeLoan.status) }}</div></div>
+        </div>
+        {% if activeLoan.installments | length > 0 %}
+        <div class="overflow-x-auto">
+        <table class="erp-table text-xs">
+          <thead><tr><th>#</th><th>Due</th><th>Amount</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for inst in activeLoan.installments %}
+            <tr>
+              <td>{{ inst.installmentNo }}</td>
+              <td>{{ inst.dueDate | date }}</td>
+              <td>{{ inst.amount | currency }}</td>
+              <td>
+                {% if inst.status == 'PENDING' %}
+                <form method="POST" action="/billing/loans/installments/{{ inst.id }}/pay" class="flex gap-1">
+                  <input type="hidden" name="amount" value="{{ inst.amount }}">
+                  <select name="paymentMode" class="erp-select text-xs"><option value="CASH">Cash</option><option value="UPI">UPI</option><option value="CARD">Card</option></select>
+                  <button type="submit" class="erp-btn-secondary text-xs px-2">Pay</button>
+                </form>
+                {% else %}{{ statusBadge(inst.status) }}{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+        <a href="/billing/loans" class="text-xs text-accent-600 mt-2 inline-block">Manage installments →</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if bill.status != 'CANCELLED' %}
+    <div class="erp-card" x-data="{ action: '' }">
+      <div class="erp-card-header"><h3 class="font-semibold">Bill Actions</h3></div>
+      <div class="erp-card-body space-y-4">
+        <select x-model="action" class="erp-select">
+          <option value="">Select action...</option>
+          <option value="refund">Issue Refund</option>
+          <option value="credit">Issue Credit Note</option>
+          <option value="cancel">Cancel Bill</option>
+        </select>
+
+        <form x-show="action === 'refund'" x-cloak method="POST" action="/billing/{{ bill.id }}/refund" class="space-y-3">
+          <div><label class="erp-label">Refund Amount</label><input type="number" name="amount" class="erp-input" max="{{ bill.paidAmount }}" step="0.01" required></div>
+          <div><label class="erp-label">Reason</label><input type="text" name="reason" class="erp-input" required></div>
+          <button type="submit" class="erp-btn-secondary w-full">Process Refund</button>
+        </form>
+
+        <form x-show="action === 'credit'" x-cloak method="POST" action="/billing/{{ bill.id }}/credit-note" class="space-y-3">
+          <div><label class="erp-label">Credit Amount</label><input type="number" name="amount" class="erp-input" step="0.01" required></div>
+          <div><label class="erp-label">Reason</label><input type="text" name="reason" class="erp-input" required></div>
+          <button type="submit" class="erp-btn-secondary w-full">Issue Credit Note</button>
+        </form>
+
+        <form x-show="action === 'cancel'" x-cloak method="POST" action="/billing/{{ bill.id }}/cancel" class="space-y-3">
+          <div><label class="erp-label">Cancellation Reason</label><input type="text" name="reason" class="erp-input" required></div>
+          <button type="submit" class="erp-btn-danger w-full" onclick="return confirm('Cancel this bill?')">Cancel Bill</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if bill.creditNotes and bill.creditNotes.length %}
+    <div class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Credit Notes</h3></div>
+      <div class="erp-card-body space-y-2">
+        {% for cn in bill.creditNotes %}
+        <div class="flex justify-between text-sm border-b border-slate-100 pb-2">
+          <span class="font-mono text-xs">{{ cn.creditNoteNo }}</span>
+          <span>{{ cn.amount | currency }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if user.permissions and ('billing.maintenance' in user.permissions or '*' in user.permissions) and bill.status != 'CANCELLED' %}
+    <div class="erp-card" x-data="{ maintAction: '' }">
+      <div class="erp-card-header"><h3 class="font-semibold">Bill Maintenance</h3></div>
+      <div class="erp-card-body space-y-4">
+        <select x-model="maintAction" class="erp-select text-sm">
+          <option value="">Select maintenance action...</option>
+          <option value="date">Change Bill Date</option>
+          <option value="consultant">Change Consultant</option>
+          <option value="payment">Change Payment Mode</option>
+          <option value="upgrade">Upgrade Bill</option>
+        </select>
+
+        <form x-show="maintAction === 'date'" x-cloak method="POST" action="/billing/{{ bill.id }}/change-date" class="space-y-3">
+          <div><label class="erp-label">New Date</label><input type="date" name="billDate" class="erp-input" required></div>
+          <div><label class="erp-label">Reason</label><input type="text" name="reason" class="erp-input" required></div>
+          <button type="submit" class="erp-btn-secondary w-full text-sm">Update Date</button>
+        </form>
+
+        <form x-show="maintAction === 'consultant'" x-cloak method="POST" action="/billing/{{ bill.id }}/change-consultant" class="space-y-3">
+          <div>
+            <label class="erp-label">Consultant</label>
+            <select name="consultantId" class="erp-select" required>
+              {% for c in consultants %}<option value="{{ c.id }}">{{ c.firstName }} {{ c.lastName }}</option>{% endfor %}
+            </select>
+          </div>
+          <div><label class="erp-label">Reason</label><input type="text" name="reason" class="erp-input" required></div>
+          <button type="submit" class="erp-btn-secondary w-full text-sm">Update Consultant</button>
+        </form>
+
+        <form x-show="maintAction === 'payment'" x-cloak method="POST" action="/billing/{{ bill.id }}/change-payment-mode" class="space-y-3">
+          <div>
+            <label class="erp-label">Payment Mode</label>
+            <select name="paymentMode" class="erp-select" required>
+              <option value="CASH">Cash</option>
+              <option value="CARD">Card</option>
+              <option value="UPI">UPI</option>
+              <option value="BANK_TRANSFER">Bank Transfer</option>
+              <option value="CHEQUE">Cheque</option>
+            </select>
+          </div>
+          <div><label class="erp-label">Reason</label><input type="text" name="reason" class="erp-input" required></div>
+          <button type="submit" class="erp-btn-secondary w-full text-sm">Update Payment Mode</button>
+        </form>
+
+        <form x-show="maintAction === 'upgrade'" x-cloak method="POST" action="/billing/{{ bill.id }}/upgrade" class="space-y-3" id="upgrade-form">
+          <p class="text-xs text-slate-500">Add upgrade line items to create a new linked bill</p>
+          <div class="flex gap-2">
+            <select id="upgrade-treatment" class="erp-select text-sm flex-1">
+              {% for t in treatments %}<option value="{{ t.id }}|{{ t.code }}|{{ t.name }}|{{ t.basePrice }}">{{ t.name }} — {{ t.basePrice | currency }}</option>{% endfor %}
+            </select>
+            <button type="button" onclick="addUpgradeItem()" class="erp-btn-secondary text-xs">Add</button>
+          </div>
+          <ul id="upgrade-items-list" class="text-xs space-y-1"></ul>
+          <input type="hidden" name="items" id="upgrade-items-json" value="[]">
+          <div><label class="erp-label">Notes</label><input type="text" name="notes" class="erp-input text-sm"></div>
+          <button type="submit" class="erp-btn-primary w-full text-sm">Create Upgrade Bill</button>
+        </form>
+      </div>
+    </div>
+
+    {% if maintenanceLogs and maintenanceLogs.length %}
+    <div class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Maintenance Log</h3></div>
+      <div class="erp-card-body space-y-2 max-h-48 overflow-y-auto">
+        {% for log in maintenanceLogs %}
+        <div class="text-xs border-b border-slate-100 pb-2">
+          <div class="font-medium">{{ log.action }}</div>
+          <div class="text-slate-500">{{ log.oldValue }} → {{ log.newValue }}</div>
+          {% if log.reason %}<div class="text-slate-400">{{ log.reason }}</div>{% endif %}
+          <div class="text-slate-400">{{ log.createdAt | datetime }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const upgradeItems = [];
+function addUpgradeItem() {
+  const [treatmentId, code, name, price] = document.getElementById('upgrade-treatment').value.split('|');
+  upgradeItems.push({ treatmentId, itemType: 'TREATMENT', itemCode: code, itemName: name, quantity: 1, unitPrice: parseFloat(price) });
+  document.getElementById('upgrade-items-json').value = JSON.stringify(upgradeItems);
+  document.getElementById('upgrade-items-list').innerHTML = upgradeItems.map(i => `<li>${i.itemName} — ${i.unitPrice}</li>`).join('');
+}
+function loanCalculator() {
+  return {
+    rate: 12, tenure: 6, provider: 'INTERNAL', emiDisplay: '₹0',
+    init() { this.calcEmi({{ bill.balanceAmount | default(0) }}); },
+    calcEmi(principal) {
+      const p = principal || 0;
+      const r = this.provider === 'BAJAJ' ? 0 : (this.rate || 0) / 12 / 100;
+      const n = this.tenure || 1;
+      let emi = r === 0 ? p / n : (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+      emi = Math.round(emi * 100) / 100;
+      this.emiDisplay = '₹' + emi.toLocaleString('en-IN');
+    }
+  };
+}
+</script>
+{% endblock %}

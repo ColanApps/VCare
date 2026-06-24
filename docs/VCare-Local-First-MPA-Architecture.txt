@@ -1,0 +1,1301 @@
+================================================================================
+  VCare ERP — Local-First Multi-Page Application
+  Engineering Architecture, Workflow Specification & UX Design System
+================================================================================
+  Version : 1.0.0
+  Date    : 2026-06-24
+  Status  : Authoritative specification for client-side parity with Express ERP
+  Scope   : Every workflow, single-role and multi-role chains, E2E functional
+================================================================================
+
+
+TABLE OF CONTENTS
+-----------------
+  1.  Executive Summary & Non-Negotiables
+  2.  System Context & Deployment Topology
+  3.  Layered Architecture
+  4.  Data Platform (IndexedDB + Session Store)
+  5.  Repository & Service Layer (Backend-Swap Ready)
+  6.  Workflow Orchestration Engine
+  7.  Role Model, RBAC & Maker-Checker Matrix
+  8.  Complete Workflow Catalog (Module-by-Module)
+  9.  Multi-User Role Chain Specifications (Golden Paths)
+ 10.  Single-User Workflow Specifications
+ 11.  Task Queue & Role Home (Work Inbox)
+ 12.  Multi-Page Application Shell & Routing
+ 13.  Design System & UX Engineering
+ 14.  Forms, Validation & Guided Wizards
+ 15.  Documents: PDF, Receipts, Uploads (Client-Side)
+ 16.  Offline, Sync & Conflict Resolution
+ 17.  Security Model (Client Trust Boundary)
+ 18.  Testing Strategy & E2E Acceptance Matrix
+ 19.  Implementation Phases & Definition of Done
+ 20.  Appendix A — Entity Relationship Summary
+ 21.  Appendix B — Permission Code Reference
+ 22.  Appendix C — Screen Registry Parity Map
+
+
+================================================================================
+1. EXECUTIVE SUMMARY & NON-NEGOTIABLES
+================================================================================
+
+PURPOSE
+-------
+Deliver a production-grade, local-first Multi-Page Application (MPA) that
+replicates the full VCare ERP clinic operations stack without a live server
+during demo/field use. All business logic, role chains, maker-checker rules,
+and workflow side-effects must behave identically to the current Express +
+Prisma application. The architecture must allow a future swap from local
+repositories to remote REST/GraphQL APIs with zero UI rewrites.
+
+NON-NEGOTIABLE REQUIREMENTS
+---------------------------
+  N1.  Every workflow in Section 8 must be implementable and testable E2E.
+  N2.  Every multi-role chain in Section 9 must pass acceptance tests with
+       role switching (simulated users) without data corruption.
+  N3.  Payment collection is ACCOUNTS-only (billing.payments). Bill creation
+       may include zero paidAmount for non-Accounts roles.
+  N4.  Day close: BM submits (finance.close.submit); Accounts approves/locks
+       (finance.close.approve). Maker-checker enforced — submitter ≠ approver.
+  N5.  Workflow hooks (follow-ups, audit logs, stock movements, visit creation)
+       fire atomically within a single IndexedDB transaction per user action.
+  N6.  No raw localStorage for entity data — IndexedDB only. localStorage
+       limited to: active session token, UI preferences, last branch, theme.
+  N7.  MPA navigation: real URLs (History API), deep-linkable, back-button safe.
+  N8.  Parity with smoke-workflow.mjs golden paths is the release gate.
+
+WHAT THIS IS NOT
+----------------
+  - Not a static site with ad-hoc JSON in localStorage.
+  - Not a single-page React app replacing 200+ screens in one bundle.
+  - Not a security boundary — client-side RBAC is UX + integrity; real enforcement
+    moves to API when backend is connected.
+
+TARGET STACK (RECOMMENDED)
+--------------------------
+  Build   : Vite + TypeScript
+  UI      : Tailwind CSS 4 + existing VCare design tokens
+  Pages   : File-based MPA entries (one HTML shell per module area)
+  State   : Thin view controllers; domain in services
+  DB      : Dexie.js 4.x over IndexedDB (schema versioned migrations)
+  PDF     : jsPDF + html2canvas OR pdf-lib for receipts/bills/challans
+  Uploads : Blob stores in IndexedDB attachments table
+  Test    : Vitest (unit) + Playwright (E2E role chains)
+  Deploy  : Netlify / static CDN (assets only; no server functions required)
+
+
+================================================================================
+2. SYSTEM CONTEXT & DEPLOYMENT TOPOLOGY
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         BROWSER (Clinic Workstation)                        │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐ │
+│  │  MPA Shell   │  │ View Layer   │  │ App Services │  │ Workflow Engine │ │
+│  │  (layout,    │→ │ (pages,      │→ │ (billing,    │→ │ (orchestration, │ │
+│  │   nav, RBAC) │  │  forms, HTMX │  │  inventory…) │  │  task queue)    │ │
+│  │              │  │  -style DOM) │  │              │  │                 │ │
+│  └──────────────┘  └──────────────┘  └──────┬───────┘  └────────┬────────┘ │
+│                                              │                    │          │
+│                                    ┌─────────▼────────────────────▼────────┐ │
+│                                    │     Repository Adapter Interface      │ │
+│                                    │  ┌─────────────┐  ┌─────────────────┐ │ │
+│                                    │  │ LocalRepo   │  │ RemoteRepo      │ │ │
+│                                    │  │ (IndexedDB) │  │ (future API)    │ │ │
+│                                    │  └─────────────┘  └─────────────────┘ │ │
+│                                    └───────────────────────────────────────┘ │
+│  ┌─────────────────────────────────────────────────────────────────────────┐ │
+│  │ IndexedDB: vcare_erp_v1  |  Blobs: attachments  |  Session: localStorage│ │
+│  └─────────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                          (future)    │  HTTPS + JWT
+                                      ▼
+                            ┌──────────────────┐
+                            │  VCare API       │
+                            │  Express + Prisma│
+                            │  MySQL / Postgres│
+                            └──────────────────┘
+
+DEPLOYMENT MODES
+----------------
+  Mode A — Pure Local (Phase 1 target)
+    - Seed on first load from bundled seed.json (mirror prisma/seed.js output)
+    - All writes local; export/import JSON for backup
+    - Multi-user simulation: quick user switcher (dev/demo) OR separate browser
+      profiles per role (production demo)
+
+  Mode B — Hybrid Sync (Phase 3)
+    - LocalRepo primary; RemoteRepo push/pull queue
+    - Optimistic UI; conflict resolution per entity (Section 16)
+
+  Mode C — Remote Primary (Phase 4)
+    - RemoteRepo default; LocalRepo cache for offline read
+
+
+================================================================================
+3. LAYERED ARCHITECTURE
+================================================================================
+
+PRESENTATION LAYER
+  - Shell: sidebar, top bar, branch selector, role-aware nav, task queue drawer
+  - Pages: one route → one page module; lazy-loaded JS per module
+  - Components: tables, filters, modals, steppers, toast, confirm dialogs
+  - No business rules in templates — only display logic
+
+APPLICATION LAYER (mirrors src/services/*)
+  - billingService, pharmacyService, salesOrderService
+  - financeClosureService, workflowOrchestrationService
+  - taskQueueService, supplyChainOrchestrationService
+  - treatmentPlanService, schedulePendingService, kitShortfallService
+  - documentPdfService (client PDF generation)
+  - Each service: pure async functions; accepts tx context for atomicity
+
+DOMAIN LAYER
+  - Entities: typed records matching Prisma models (subset per phase)
+  - Value objects: Money (paise integers), BillStatus, DayCloseStatus
+  - Domain events: BillCreated, PaymentRecorded, ProcedureCompleted, etc.
+  - Invariants enforced here BEFORE persistence
+
+INFRASTRUCTURE LAYER
+  - Dexie schema + migrations
+  - Repository implementations (CRUD + query indexes)
+  - Id generators (billNo, appointmentNo — same sequences as server)
+  - Clock abstraction (testable dates for day-close)
+  - File/blob store
+
+CROSS-CUTTING
+  - authContext: currentUser, permissions Set, branchId
+  - auditLog: append-only on every mutating action
+  - permissionGuard(route, action): throws ForbiddenError
+  - transactionRunner: wraps Dexie transaction + event dispatch
+
+
+================================================================================
+4. DATA PLATFORM (IndexedDB + SESSION STORE)
+================================================================================
+
+DATABASE NAME: vcare_erp_v1
+
+SCHEMA VERSIONING
+  - db.version(N).stores({...}).upgrade(tx => {...})
+  - Never destructive upgrade without export warning
+  - schemaHash in meta table; mismatch → block app, offer re-seed
+
+CORE TABLES (Dexie stores — indexed fields marked with *)
+------------------------------------------------------------
+  meta                    : key, value
+  users*                  : id*, email*, roleCode*, branchId*
+  roles                   : id, code, name, level
+  permissions             : id, code, module, action
+  rolePermissions         : roleId, permissionCode
+  branches*               : id*, code*
+  customers*              : id*, branchId*, phone*, createdAt*
+  appointments*           : id*, customerId*, branchId*, consultantId*,
+                            scheduledAt*, status*, appointmentNo*
+  consultations*          : id*, customerId*, consultantId*, status*
+  procedures*             : id*, customerId*, appointmentId*, performerId*,
+                            status*, billId, pharmacyBillId, treatmentSlipId*,
+                            sessionNo, procedureNo*
+  treatmentSlips*         : id*, customerId*, slipNo*, status*, nextSessionDueAt*
+  treatmentPlanSteps      : slipId, stepNo, status
+  bills*                  : id*, customerId*, branchId*, billNo*, billType*,
+                            status*, balanceAmount*, billDate*
+  billLines               : billId, lineNo, ...
+  payments*               : id*, billId*, amount, mode, receivedAt*
+  advances*               : id*, customerId*, balance*
+  advanceApplications     : advanceId, billId, amount
+  creditNotes*            : id*, billId*, status*
+  refunds*                : id*, billId*, status*, type*
+  followUps*              : id*, customerId*, type*, status*, scheduledAt*,
+                            assignedTo*
+  products*               : id*, sku*, name*, reorderLevel
+  stockLedger*            : id*, branchId*, productId*, qty, refType, refId
+  indents*                : id*, branchId*, status*
+  stockTransfers*         : id*, status*, fromBranchId, toBranchId
+  stockOutward*           : id*, branchId*, status*
+  clinicalConsumption*    : id*, procedureId*, productId*
+  purchaseOrders*         : id*, vendorId*, status*
+  grns*                   : id*, poId*, status*
+  workOrders*             : id*, branchId*, status*
+  vendors                 : id, code, name
+  salesOrders*            : id*, branchId*, status*
+  salesInvoices*          : id*, salesOrderId*, billId
+  dayClose*               : id*, branchId*, closeDate*, status*
+  pettyCash*              : id*, branchId*, status*
+  iouRequests*            : id*, status*
+  permanentRefunds*       : id*, status*
+  cashDeposits*           : id*, status*
+  reimbursements*         : id*, status*
+  incentiveUploads*       : id*, status*
+  loanInstallments*       : id*, status*, dueDate*
+  tickets*                : id*, status*
+  auditLogs*              : id*, userId*, action*, createdAt*
+  attachments*            : id*, entityType*, entityId*, blob
+  sequences               : name, nextValue  (atomic counters)
+  syncQueue               : id, op, payload, status, createdAt  (Phase 3)
+
+INDEX STRATEGY
+  - Every task-queue query must hit an index (no full table scans > 500 rows)
+  - Composite indexes simulated via compound fields where Dexie limits apply
+
+SESSION (localStorage — keys prefixed vcare.)
+  vcare.session     : { userId, branchId, loginAt, expiresAt }
+  vcare.theme       : light | dark
+  vcare.sidebar     : collapsed boolean
+  vcare.lastRoute   : fallback after re-login
+
+SEED DATA
+  - Export script: node scripts/export-seed-json.mjs → public/seed/v1.json
+  - First boot: if users.count() === 0 → import seed (same demo users as seed.js)
+  - Demo credentials unchanged: admin@vcare.com / VCare@123
+
+
+================================================================================
+5. REPOSITORY & SERVICE LAYER (BACKEND-SWAP READY)
+================================================================================
+
+ADAPTER INTERFACE (TypeScript)
+------------------------------
+  interface DataAdapter {
+    transaction<T>(fn: (repos: Repositories) => Promise<T>): Promise<T>;
+    users: UserRepo;
+    bills: BillRepo;
+  // ... one repo per aggregate root
+  }
+
+  // Bootstrap:
+  const adapter = config.apiBaseUrl
+    ? new RemoteAdapter(config.apiBaseUrl)
+    : new LocalAdapter(db);
+
+SERVICE RULE
+------------
+  Pages call Services only. Services call Repos + WorkflowEngine.
+  Never: page → Dexie direct.
+
+PARITY LIST — services to port (1:1 with server)
+-------------------------------------------------
+  authService                 login, logout, switchBranch, hasPermission
+  billingService              createBill, collectPayment, cancelBill, refund,
+                              assertCreatePaymentAllowed, credit note, advance
+  pharmacyService             createPharmacyBill, createPharmacyB2BBill
+  salesOrderService           createOrder, invoice, assertCreatePaymentAllowed
+  financeClosureService       submitDayClose, approveDayClose, lockDayClose,
+                              isDayLocked
+  workflowOrchestrationService  all on* hooks (Section 6)
+  taskQueueService            getRoleTaskQueue
+  treatmentPlanService        progress, next session, slip completion
+  schedulePendingService      customer schedule workflow steps
+  supplyChainOrchestrationService  reorder, indent approved, WO completed
+  kitShortfallService         low stock, procedure kit gaps
+  documentPdfService          bill, receipt, advance, delivery challan PDFs
+  inventoryService            stock in/out, transfer, indent lifecycle
+  purchaseService             PO, GRN, work order
+  operationsService           IOU, petty cash, reimbursement, tickets
+  incentiveService            upload, calculate, approve
+  reportService               aggregated queries (read-only)
+
+TRANSACTION ATOMICITY PATTERN
+-----------------------------
+  async function createBillWithWorkflow(input, ctx) {
+    return adapter.transaction(async (repos) => {
+      const bill = await billingService.createBill(input, repos);
+      await workflowEngine.notifyBillWorkflow({ bill, ... }, repos);
+      await auditLog.write('BILL_CREATED', bill, ctx.user);
+      return bill;
+    });
+  }
+
+
+================================================================================
+6. WORKFLOW ORCHESTRATION ENGINE
+================================================================================
+
+The workflow engine is the nervous system. Each hook mirrors
+src/services/workflowOrchestrationService.js and MUST run inside the same
+transaction as the triggering mutation.
+
+EVENT → HOOK MAP
+----------------
+  APPOINTMENT_BOOKED
+    → appointment.status = CONFIRMED
+    → complete pending follow-ups (NOT_JOINED, REGULAR, TREATMENT)
+    → audit log
+
+  CONSULTATION_COMPLETED
+    → consultation.status = COMPLETED, consultedAt = now
+
+  PROCEDURE_COMPLETED
+    → procedure.status = COMPLETED, completedAt = now
+    → linked appointment.status = COMPLETED
+    → createVisitFromProcedure
+    → maybeCompleteTreatmentSlip
+    → scheduleNextSessionFollowUp
+    → create follow-up type PROCEDURE_COMPLETED (PENDING)
+
+  BILL_CREATED (via notifyBillWorkflow)
+    → link procedure.billId, procedure.status = COMPLETED
+    → complete PROCEDURE_COMPLETED follow-ups
+    → if balance > 0: create PENDING_ADVANCE follow-up (if not exists)
+    → audit log
+
+  PAYMENT_RECORDED
+    → if balance <= 0: complete PENDING_ADVANCE follow-ups
+    → scheduleRebookAfterPayment
+
+  PHARMACY_BILL_CREATED
+    → link procedure.pharmacyBillId
+    → audit log
+
+  INDENT_APPROVED (supply chain)
+    → fulfillment workflow, stock reservation
+
+  WORK_ORDER_COMPLETED
+    → stock inward, cost update
+
+  CLINICAL_CONSUMPTION_RECORDED
+    → stockLedger decrement
+    → checkReorderAfterConsumption → maybe auto-indent
+
+IMPLEMENTATION
+--------------
+  class WorkflowEngine {
+    constructor(repos, eventBus) {}
+    async dispatch(event: DomainEvent, repos): Promise<void>
+  }
+
+  // Subscribers registered at app boot — order matters for dependencies
+
+IDEMPOTENCY
+  - Hooks check current entity state before writing duplicates
+  - followUp creation: findFirst pending of same type before insert
+
+
+================================================================================
+7. ROLE MODEL, RBAC & MAKER-CHECKER MATRIX
+================================================================================
+
+STAFF ROLES (9 — no CUSTOMER login, no RECEPTIONIST in v1)
+------------------------------------------------------------
+  SUPER_ADMIN      level 100   all permissions
+  CORPORATE        level 90    executive dashboards, IOU approve, tickets
+  BRANCH_MANAGER   level 70    branch ops, bill create (no payment), day close submit
+  ACCOUNTS         level 60    payments, refunds, day close approve, finance
+  CONSULTANT       level 50    clinical, bill create (no payment)
+  THERAPIST        level 45    procedures, consumption, no billing create
+  WAREHOUSE        level 40    purchase, GRN, dispatch, stock
+  PHARMACIST       level 35    pharmacy bills (no payment at create)
+  CALL_CENTER      level 30    leads, appointments, follow-ups
+
+PERMISSION ENFORCEMENT POINTS
+-----------------------------
+  Route guard       : can user see this page?
+  Action guard      : can user submit this form field / button?
+  Field guard       : hide paidAmount unless billing.payments
+  Service guard     : assertCreatePaymentAllowed(roleCode, paidAmount)
+  Maker-checker     : day close, permanent refund, IOU corporate approve
+
+CRITICAL SPLIT PERMISSIONS
+--------------------------
+  finance.close.submit   → BRANCH_MANAGER
+  finance.close.approve  → ACCOUNTS (not BM)
+  billing.payments       → ACCOUNTS only
+  billing.create         → BM, CONSULTANT (creates bill, balance OK)
+  billing.pharmacy       → PHARMACIST
+  billing.pharmacy.b2b   → BM, PHARMACIST (no payment at create)
+  billing.service.b2b    → BM (no payment at create)
+  inventory.authorize    → BM (indents, outward)
+  purchase.workorder     → BM authorize, WAREHOUSE fulfill
+
+MAKER-CHECKER RULES
+-------------------
+  Day Close:
+    submitterId stored on submit; approverId on approve; must differ
+    lock requires approved status
+
+  Permanent Refund:
+    create (BM/Accounts per config) → approve → issueRefund executes
+
+  IOU:
+    request (BM) → approve (CORPORATE)
+
+  Petty Cash:
+    request → approve (BM)
+
+  Work Order:
+    create → PENDING_AUTH → BM authorize → WAREHOUSE complete
+
+  Stock Indent:
+    create → PENDING → BM authorize → WAREHOUSE fulfill
+
+
+================================================================================
+8. COMPLETE WORKFLOW CATALOG (MODULE-BY-MODULE)
+================================================================================
+
+Each workflow: Trigger → Steps → Actors → Outcome → Side Effects
+
+─── AUTH & SESSION ───────────────────────────────────────────────────────────
+  W-AUTH-01  Login
+    Trigger: user submits email/password
+    Steps: validate → load user+role+permissions → set session
+    Outcome: redirect to role home (/portal/{role} or /dashboard)
+    E2E: invalid password → error; valid → task queue populated
+
+  W-AUTH-02  Logout
+    Steps: clear session → redirect /login
+
+  W-AUTH-03  Branch switch (multi-branch users)
+    Steps: update session.branchId → reload branch-scoped data
+
+─── DASHBOARD ────────────────────────────────────────────────────────────────
+  W-DASH-01  Role dashboard view
+    Permission: dashboard.view (+ module-specific widgets)
+    Widgets: inflow, sales, treatment, stock_inward, biometric — per role
+
+─── CUSTOMER / CRM ───────────────────────────────────────────────────────────
+  W-CUST-01  Create customer (Call Center, BM)
+    Steps: form → validate phone unique → customer.create
+    Side: audit log; appears in schedule-pending if no appointment
+
+  W-CUST-02  Customer search & profile
+    View: demographics, appointments, bills, treatment slips, follow-ups
+
+  W-CUST-03  Schedule pending workflow
+    Steps: multi-step wizard per customer (consultation slot, treatment plan,
+           documents, consent prerequisites)
+    Actor: Consultant, Therapist, Call Center
+    Side: scheduleSteps status updates; task queue "Schedule pending"
+
+  W-CUST-04  Consultation
+    Steps: open consultation → notes → complete
+    Hook: onConsultationCompleted
+    Actor: Consultant
+
+  W-CUST-05  Customer photos / documents
+    Permission: customer.photos
+    Upload → attachments blob store
+
+  W-CUST-06  Treatment plan / slip
+    Create slip → sessions → procedures linked to slip
+    Hook: session due dates, next sitting follow-up
+
+  W-CUST-07  Inactive customers report (read-only)
+
+  W-CUST-08  Refund complaints register
+    Links to billing.refunds workflow
+
+─── CALL CENTER ──────────────────────────────────────────────────────────────
+  W-CC-01  Dialer lookup
+    Steps: phone search → customer match/create → book appointment
+    Hook: onAppointmentBooked
+
+  W-CC-02  Follow-up queue
+    Types: NOT_JOINED, REGULAR, TREATMENT, PROCEDURE_COMPLETED, PENDING_ADVANCE
+    Steps: open → complete with feedback / book appointment / escalate
+    Actor: Call Center
+
+  W-CC-03  Treatment booked confirmation
+    View/confirm upcoming treatment appointments
+
+  W-CC-04  Next sitting booking
+    Trigger: session due (treatment slip progress)
+    Steps: find customer → book procedure session N+1
+    Chain: see W-CHAIN-03
+
+  W-CC-05  Lead upload (CSV)
+  W-CC-06  Lead assignment / schedule pending redirect
+
+─── APPOINTMENTS ─────────────────────────────────────────────────────────────
+  W-APPT-01  Create appointment
+    Steps: customer, consultant, slot, treatment → save
+    Hook: onAppointmentBooked, follow-up completion
+
+  W-APPT-02  Fix new appointment (form registry)
+
+  W-APPT-03  Appointment detail / status transitions
+    SCHEDULED → CONFIRMED → IN_PROGRESS → COMPLETED / CANCELLED
+
+  W-APPT-04  Online appointments list (read)
+
+  W-APPT-05  Consultant search / performer calendar
+
+  W-APPT-06  Treatment status report
+
+─── CLINICAL / PROCEDURES ────────────────────────────────────────────────────
+  W-CLIN-01  Clinical workflow wizard (/clinical/workflow/:customerId)
+    Steps: consult → procedure → consumption → pharmacy? → bill
+    Guided stepper with gating (consent before start, consumption before complete)
+
+  W-CLIN-02  Procedure lifecycle
+    BOOKED → SCHEDULED → IN_PROGRESS → COMPLETED
+    consentGiven must be true before IN_PROGRESS
+
+  W-CLIN-03  Procedure complete
+    Hook: onProcedureCompleted (visit, slip, follow-up)
+
+  W-CLIN-04  Consent capture
+    Task queue: urgent if missing
+
+  W-CLIN-05  Clinical consumption
+    Steps: select procedure → kit lines from master → deduct stock
+    Hook: checkReorderAfterConsumption
+    Actor: Therapist, Consultant
+
+  W-CLIN-06  Unbilled procedure queue
+    Task: "Bill pending" → clinical workflow or direct bill
+
+─── BILLING ──────────────────────────────────────────────────────────────────
+  W-BILL-01  Service bill from procedure
+    Steps: lines from treatment → create bill
+    Guard: paidAmount=0 unless billing.payments
+    Hook: notifyBillWorkflow
+    Actor: Consultant, BM
+
+  W-BILL-02  Collect payment
+    Steps: amount, mode, reference → payment record → balance recalc
+    Guard: billing.payments (Accounts)
+    Hook: onPaymentRecorded
+    Block: day locked for refund-related ops
+
+  W-BILL-03  Bill cancel
+    Permission: billing.cancel (BM)
+    Steps: reason → status CANCELLED → reverse stock if applicable
+
+  W-BILL-04  Credit note
+    Steps: create → apply to bill balance
+
+  W-BILL-05  Advance receipt
+    Steps: collect advance → advance.balance += amount
+    PDF: advance receipt
+
+  W-BILL-06  Apply advance to bill
+    Steps: select advance → apply → reduce bill.balance
+
+  W-BILL-07  Refund (standard)
+    Permission: billing.refunds
+    Day-lock check via financeClosureService
+
+  W-BILL-08  Permanent refund
+    Steps: request + upload → approve → issueRefund
+    Maker-checker
+
+  W-BILL-09  Installment / loan EMI
+    Permission: billing.loans, billing.installments
+    Steps: schedule → mark paid → update loanInstallment
+
+  W-BILL-10  Pharmacy retail bill
+    Actor: Pharmacist
+    Guard: no payment at create for non-Accounts
+    Hook: onPharmacyBillCreated when linked to procedure
+
+  W-BILL-11  Pharmacy B2B bill
+    Actor: Pharmacist, BM
+    UI: hide paid fields without billing.payments
+    Service: assertCreatePaymentAllowed
+
+  W-BILL-12  Service B2B bill
+    Actor: BM
+    Same payment guard as W-BILL-11
+
+  W-BILL-13  Bill PDF download
+    Route parity: /billing/:id/pdf
+
+  W-BILL-14  Maintenance billing
+    Permission: billing.maintenance
+
+  W-BILL-15  Archive / cancellation reports (read)
+
+─── FINANCE ──────────────────────────────────────────────────────────────────
+  W-FIN-01  Day close — draft
+    Actor: BM
+    Steps: enter counters, cash, card totals → save DRAFT
+
+  W-FIN-02  Day close — submit
+    Permission: finance.close.submit
+    Status: DRAFT → SUBMITTED; store submitterId
+
+  W-FIN-03  Day close — approve & lock
+    Permission: finance.close.approve
+    Guard: submitterId ≠ currentUser.id
+    Status: SUBMITTED → APPROVED → LOCKED
+    Effect: block backdated mutations on locked dates
+
+  W-FIN-04  AR aging / outstanding (Accounts task queue)
+
+  W-FIN-05  Advance audit trail
+
+  W-FIN-06  Cash deposit
+    Steps: record + proof upload → approve
+
+  W-FIN-07  Incentive upload → calculate → approve payout
+    Permission: finance.incentives
+
+  W-FIN-08  Receipt PDF /finance/receipt/:id/pdf
+
+  W-FIN-09  GST reports (read)
+
+─── INVENTORY ────────────────────────────────────────────────────────────────
+  W-INV-01  Product master CRUD
+  W-INV-02  Stock view / ledger
+  W-INV-03  Indent create
+    Steps: lines → submit PENDING
+  W-INV-04  Indent authorize (BM)
+    Hook: onIndentApproved
+  W-INV-05  Indent fulfill (Warehouse)
+    Stock outward / transfer
+  W-INV-06  Stock transfer between branches
+    PENDING → approved → dispatched → received
+  W-INV-07  Stock outward authorize (BM)
+  W-INV-08  Kit shortfall dashboard
+    Procedure-linked BOM vs on-hand stock
+  W-INV-09  Clinical consumption (see W-CLIN-05)
+  W-INV-10  Reorder trigger after consumption
+
+─── PURCHASE / WAREHOUSE ─────────────────────────────────────────────────────
+  W-PUR-01  Vendor master
+  W-PUR-02  Purchase order create → send
+  W-PUR-03  GRN receive → QC → stock in
+  W-PUR-04  Work order create → PENDING_AUTH
+  W-PUR-05  Work order authorize (BM)
+  W-PUR-06  Work order complete (Warehouse)
+    Hook: onWorkOrderCompleted
+  W-PUR-07  Warehouse dispatch (indent fulfillment)
+  W-PUR-08  Delivery challan PDF
+
+─── SALES (non-clinical B2B) ─────────────────────────────────────────────────
+  W-SALE-01  Sales order create
+  W-SALE-02  Sales invoice from order
+    Guard: assertCreatePaymentAllowed on paid fields
+    Hook: notifyBillWorkflow
+  W-SALE-03  Delivery / dispatch link
+
+─── OPERATIONS ───────────────────────────────────────────────────────────────
+  W-OPS-01  IOU request (BM) → approve (Corporate)
+  W-OPS-02  Petty cash request → approve (BM)
+  W-OPS-03  Reimbursement + upload
+  W-OPS-04  Support tickets (Corporate, BM)
+  W-OPS-05  Permanent refund (see W-BILL-08)
+
+─── REPORTS ──────────────────────────────────────────────────────────────────
+  W-RPT-01..N  All report screens in screenRegistry.js type:'report'
+    Read-only aggregations; no workflow side effects
+    Key reports: sales, branches, customers, inventory, consultants,
+    incentives, procedure-pending, GST, targets
+
+─── MASTER DATA ──────────────────────────────────────────────────────────────
+  W-MST-01..N  Reference masters (courier, transporter, OT, banners, kits,
+    clinical treatments, targets, therapist incentives, procedure consumption)
+    CRUD via registry screens; SUPER_ADMIN / delegated permissions
+
+─── PORTALS (ROLE HOME) ──────────────────────────────────────────────────────
+  W-PORT-01  /portal/branch-manager
+  W-PORT-02  /portal/accounts
+  W-PORT-03  /portal/consultant
+  W-PORT-04  /portal/corporate
+  W-PORT-05  /portal/warehouse
+  Each: KPI cards + embedded task queue sections
+
+
+================================================================================
+9. MULTI-USER ROLE CHAIN SPECIFICATIONS (GOLDEN PATHS)
+================================================================================
+
+These chains MUST pass Playwright E2E tests with sequential user switches.
+Use a test helper: loginAs(role) → action → loginAs(nextRole) → verify state.
+
+──────────────────────────────────────────────────────────────────────────────
+CHAIN-01: Lead → Appointment → Consult → Procedure → Bill → Payment
+──────────────────────────────────────────────────────────────────────────────
+  Step  Actor          Action                           Verify
+  ────  ─────────────  ───────────────────────────────  ─────────────────────
+  1     CALL_CENTER    Create customer                  customer exists
+  2     CALL_CENTER    Book appointment                 appt CONFIRMED;
+                                                         follow-ups completed
+  3     CONSULTANT     Complete consultation            consultation COMPLETED
+  4     CONSULTANT     Start procedure, capture consent consentGiven=true
+  5     THERAPIST      Record clinical consumption      stock reduced
+  6     CONSULTANT     Complete procedure               procedure COMPLETED;
+                                                         PROCEDURE_COMPLETED FU
+  7     CONSULTANT     Create bill (paid=0)             bill balance>0;
+                                                         procedure.billId set
+  8     ACCOUNTS       Collect full payment             balance=0;
+                                                         PENDING_ADVANCE FU done
+  9     CALL_CENTER    (optional) rebook follow-up      scheduleRebook hook
+
+──────────────────────────────────────────────────────────────────────────────
+CHAIN-02: Procedure complete → Accounts bills from queue
+──────────────────────────────────────────────────────────────────────────────
+  1     CONSULTANT     Complete procedure (no bill)     unbilled in task queue
+  2     ACCOUNTS       View procedure-pending report    row visible
+  3     BM             Create bill (not payment)          bill created
+  4     ACCOUNTS       Collect payment                    paid in full
+
+──────────────────────────────────────────────────────────────────────────────
+CHAIN-03: Treatment slip multi-session
+──────────────────────────────────────────────────────────────────────────────
+  1     CONSULTANT     Create treatment slip (6 sessions) slip ACTIVE
+  2     CONSULTANT     Complete session 1 procedure       slip progress 1/6
+  3     SYSTEM         scheduleNextSessionFollowUp        nextSessionDueAt set
+  4     CALL_CENTER    Task: "Session 2 due"              book session 2
+  5     THERAPIST      Session 2 procedure + consumption
+  6     Repeat until   maybeCompleteTreatmentSlip         slip COMPLETED
+
+──────────────────────────────────────────────────────────────────────────────
+CHAIN-04: Pharmacy procedure billing
+──────────────────────────────────────────────────────────────────────────────
+  1     CONSULTANT     Procedure IN_PROGRESS              —
+  2     PHARMACIST     Create pharmacy bill for procedure pharmacyBillId set;
+                                                         task queue for BM/Accounts
+  3     ACCOUNTS       Pay pharmacy bill                  balance 0
+
+──────────────────────────────────────────────────────────────────────────────
+CHAIN-05: Payment guard — non-Accounts cannot pay at create
+──────────────────────────────────────────────────────────────────────────────
+  1     CONSULTANT     Create bill with paidAmount>0      REJECTED
+  2     CONSULTANT     Create bill paidAmount=0             OK
+  3     PHARMACIST     Pharmacy B2B with paid>0           REJECTED
+  4     BM             Service B2B with paid>0            REJECTED
+  5     ACCOUNTS       Sales invoice with payment           OK
+
+──────────────────────────────────────────────────────────────────────────────
+CHAIN-06: Day close maker-checker
+──────────────────────────────────────────────────────────────────────────────
+  1     BM             Submit day close (yesterday)       status SUBMITTED;
+                                                         submitterId=BM
+  2     BM             Attempt approve                    FORBIDDEN (no permission)
+  3     ACCOUNTS       Attempt approve as same BM user    REJECTED (same submitter)
+  4     ACCOUNTS       Approve as different user          APPROVED
+  5     ACCOUNTS       Lock day                           LOCKED;
+                                                         refunds on that date blocked
+
+──────────────────────────────────────────────────────────────────────────────
+CHAIN-07: Indent → Authorize → Fulfill
+──────────────────────────────────────────────────────────────────────────────
+  1     PHARMACIST     Create indent (low stock task)     PENDING
+  2     BM             Authorize indent                   APPROVED;
+                                                         onIndentApproved
+  3     WAREHOUSE      Fulfill / dispatch                 stock moved;
+                                                         indent CLOSED
+
+──────────────────────────────────────────────────────────────────────────────
+CHAIN-08: Work order authorization
+──────────────────────────────────────────────────────────────────────────────
+  1     WAREHOUSE      Create WO                          PENDING_AUTH
+  2     BM             Authorize                          APPROVED
+  3     WAREHOUSE      Complete WO                        stock in;
+                                                         onWorkOrderCompleted
+
+──────────────────────────────────────────────────────────────────────────────
+CHAIN-09: IOU corporate approval
+──────────────────────────────────────────────────────────────────────────────
+  1     BRANCH_MANAGER Request IOU + attachment           PENDING
+  2     CORPORATE      Approve IOU                        APPROVED
+
+──────────────────────────────────────────────────────────────────────────────
+CHAIN-10: Permanent refund
+──────────────────────────────────────────────────────────────────────────────
+  1     BM             Create permanent refund request    PENDING
+  2     ACCOUNTS       Approve                            issueRefund executed;
+                                                         bill/refund state correct
+
+──────────────────────────────────────────────────────────────────────────────
+CHAIN-11: Petty cash
+──────────────────────────────────────────────────────────────────────────────
+  1     STAFF          Petty cash request                 PENDING
+  2     BM             Approve                            APPROVED; balance updated
+
+──────────────────────────────────────────────────────────────────────────────
+CHAIN-12: Sales order → Invoice → Payment
+──────────────────────────────────────────────────────────────────────────────
+  1     BM             Create sales order                 OPEN
+  2     BM             Generate invoice (no payment)      bill linked
+  3     ACCOUNTS       Record payment                     invoice paid
+
+──────────────────────────────────────────────────────────────────────────────
+CHAIN-13: Credit note + advance application
+──────────────────────────────────────────────────────────────────────────────
+  1     BM             Bill with balance                  —
+  2     ACCOUNTS       Customer advance exists            —
+  3     ACCOUNTS       Apply advance                      balance reduced
+  4     ACCOUNTS       Credit note for remainder          ledger consistent
+
+──────────────────────────────────────────────────────────────────────────────
+CHAIN-14: Stock transfer between branches
+──────────────────────────────────────────────────────────────────────────────
+  1     WAREHOUSE      Initiate transfer                  PENDING
+  2     BM             Approve outward                    APPROVED
+  3     WAREHOUSE      Dispatch / receive at dest         both branch ledgers correct
+
+──────────────────────────────────────────────────────────────────────────────
+CHAIN-15: Incentive payout
+──────────────────────────────────────────────────────────────────────────────
+  1     ACCOUNTS       Upload incentive file              CALCULATED
+  2     ACCOUNTS       Review + approve                   APPROVED payout records
+
+
+================================================================================
+10. SINGLE-USER WORKFLOW SPECIFICATIONS
+================================================================================
+
+Single-user workflows complete within one role session without handoff.
+Each must still enforce permissions and produce correct side effects.
+
+  SU-01  SUPER_ADMIN: full CRUD on any module (bypass only for support, not
+         maker-checker — admin still cannot approve own day close submit)
+
+  SU-02  CALL_CENTER: customer create + appointment + follow-up complete
+         (no billing, no clinical)
+
+  SU-03  CONSULTANT: consultation + procedure + bill create (zero payment)
+         + view own performer calendar
+
+  SU-04  THERAPIST: procedure perform + consumption (no bill create)
+
+  SU-05  PHARMACIST: pharmacy bill + B2B create + indent create + stock view
+
+  SU-06  BM: customer + billing + cancel + indent authorize + outward authorize
+         + WO authorize + day close submit + reports (no payment collection)
+
+  SU-07  ACCOUNTS: payment on any outstanding bill + refunds + day close approve
+         + incentives + loans EMIs
+
+  SU-08  WAREHOUSE: PO, GRN, dispatch, WO complete, stock transfer
+
+  SU-09  CORPORATE: dashboards + IOU approve + tickets (read-heavy)
+
+  SU-10  All roles: global search (if permitted), profile, logout, branch switch
+
+
+================================================================================
+11. TASK QUEUE & ROLE HOME (WORK INBOX)
+================================================================================
+
+Replicate getRoleTaskQueue() exactly. Sections by role:
+
+  CALL_CENTER / SUPER_ADMIN
+    - Pending follow-ups (high)
+    - New leads without appointment (7 days)
+    - Dialer, treatment booked, lead upload links
+
+  CONSULTANT / THERAPIST / SUPER_ADMIN
+    - Sessions due (treatment slip progress)
+    - Schedule pending customers
+    - Today's appointments (scoped to performer if consultant/therapist)
+    - Consent missing (urgent)
+    - Consumption needed (in progress + master exists)
+    - Active procedures
+    - Unbilled completed procedures (urgent)
+    - Consultations link
+
+  BRANCH_MANAGER / SUPER_ADMIN
+    - Petty cash pending count
+    - Indents pending
+    - Work orders PENDING_AUTH
+    - Stock outward pending
+    - Day close pending (yesterday DRAFT/SUBMITTED/missing)
+
+  ACCOUNTS / SUPER_ADMIN
+    - Top AR bills (balance > 0)
+    - Procedures awaiting bill
+    - Overdue EMIs
+    - Incentive batches
+    - Day-close SUBMITTED count (urgent)
+    - Advance audit, finance hub, accounts portal
+
+  WAREHOUSE / SUPER_ADMIN
+    - Indents to fulfill
+    - Transfer approvals
+    - WO pending auth
+    - GRN QC pending
+
+  PHARMACIST / SUPER_ADMIN
+    - Procedure-linked pharmacy bills unpaid
+    - Low stock SKUs
+    - Kit shortfalls for upcoming procedures
+
+  CORPORATE / SUPER_ADMIN
+    - IOU pending
+    - Open tickets
+
+UI: Task drawer pinned right; priority badges (urgent/high/medium/low);
+click → deep link with entity context.
+
+
+================================================================================
+12. MULTI-PAGE APPLICATION SHELL & ROUTING
+================================================================================
+
+URL STRUCTURE (parity with Express routes)
+------------------------------------------
+  /login
+  /dashboard
+  /portal/:role
+  /customer/*
+  /call-center/*
+  /appointments/*
+  /clinical/*
+  /billing/*
+  /finance/*
+  /inventory/*
+  /purchase/*
+  /warehouse/*
+  /sales/*
+  /operations/*
+  /reports/*
+  /master/*
+  /registry/forms/*
+
+ROUTER
+  - Lightweight client router (navaid or custom History API wrapper)
+  - beforeEach: auth check → permission check → load page module
+  - Unknown route → 404 page within shell
+
+PAGE LOAD PATTERN
+  /billing/index.html + billing.js (module)
+  Shared chunks: shell.js, adapter.js, components.js
+
+SHELL LAYOUT
+  ┌────────────────────────────────────────────────────────┐
+  │ Topbar: branch | search | task badge | user menu       │
+  ├──────────┬─────────────────────────────────────────────┤
+  │ Sidebar  │  Breadcrumb > Page title                    │
+  │ (role-   │  ┌─────────────────────────────────────┐   │
+  │  filtered│  │ Main content (page outlet)          │   │
+  │  nav)    │  └─────────────────────────────────────┘   │
+  │          │  [Task drawer toggle]                       │
+  └──────────┴─────────────────────────────────────────────┘
+
+NAV GENERATION
+  - Port menu config from server (nav config JSON)
+  - Filter by permissions Set.has(permission)
+
+DEEP LINKING
+  - /billing/:id → bill detail
+  - /clinical/workflow/:customerId → wizard step from query ?step=
+
+PERFORMANCE
+  - Route-level code split (< 150kb initial shell target)
+  - Virtualized tables > 100 rows
+  - IndexedDB reads debounced for filter inputs (300ms)
+
+
+================================================================================
+13. DESIGN SYSTEM & UX ENGINEERING
+================================================================================
+
+DESIGN PRINCIPLES
+  1. Role-first: home page = task queue, not empty dashboard
+  2. One primary action per screen (green CTA)
+  3. Progressive disclosure: advanced fields collapsed
+  4. Status is always visible (chips: PENDING, SUBMITTED, LOCKED, etc.)
+  5. Money in monospace tabular figures; locale en-IN; INR ₹
+  6. Errors are inline + toast; never silent failure
+  7. Destructive actions: confirm modal with consequence text
+  8. Maker-checker: show "Waiting for Accounts approval" banner
+
+TOKENS (extend existing Tailwind config)
+  --color-primary: clinic brand (teal/green from VCare)
+  --color-urgent: red-600
+  --color-success: emerald-600
+  --radius-card: 0.75rem
+  --shadow-card: subtle
+  Typography: Inter / system-ui; headings semibold
+
+COMPONENTS (shared library)
+  DataTable      sort, filter, pagination, export CSV
+  StatusChip     mapped from enums
+  MoneyInput     paise-safe parsing
+  EntityPicker   customer, product, vendor search
+  StepperWizard  clinical workflow, schedule pending
+  EmptyState     illustration + CTA
+  PermissionGate hides children if !permission
+  PaidFieldsGate hides paid amount unless billing.payments
+  AuditTrail     collapsible list on detail pages
+
+ACCESSIBILITY
+  WCAG 2.1 AA target: focus rings, aria labels on icons, table headers,
+  keyboard nav for modals, color contrast 4.5:1
+
+RESPONSIVE
+  Min width 1024px for desktop clinic use; tablet 768px degraded but functional
+  Mobile: task queue + bill payment only (optional Phase 2)
+
+MICRO-INTERACTIONS
+  - Optimistic button loading state
+  - Toast on workflow completion ("Bill B-001 created — sent to Accounts")
+  - Task count animate on refresh
+
+
+================================================================================
+14. FORMS, VALIDATION & GUIDED WIZARDS
+================================================================================
+
+VALIDATION LAYER
+  - Zod schemas mirroring server validation
+  - Shared schema package between future API and client
+
+CLINICAL WORKFLOW WIZARD STEPS
+  1. Customer context (read-only header)
+  2. Consultation (skip if completed today)
+  3. Procedure select / create
+  4. Consent gate
+  5. Consumption (if master mapping exists)
+  6. Pharmacy (optional branch)
+  7. Billing summary (create bill, no payment)
+  8. Done → prompt "Hand off to Accounts for payment"
+
+SCHEDULE PENDING WIZARD
+  Dynamic steps from customer.scheduleSteps JSON
+  Cannot skip PENDING steps marked required
+
+DAY CLOSE FORM
+  BM: full edit when DRAFT
+  BM: submit button only when finance.close.submit
+  Accounts: read-only totals + approve when SUBMITTED
+  Show submitter name on approve screen
+
+FORM PERSISTENCE
+  - Draft auto-save to IndexedDB drafts table every 30s
+  - Recover on page reload
+
+
+================================================================================
+15. DOCUMENTS: PDF, RECEIPTS, UPLOADS (CLIENT-SIDE)
+================================================================================
+
+PDF GENERATION (parity documentPdfService.js)
+  - Bill PDF          /billing/:id/pdf
+  - Receipt PDF       /finance/receipt/:id/pdf
+  - Advance PDF       /finance/advance/:id/pdf
+  - Delivery challan  /warehouse/challan/:id/pdf
+
+  Implementation: HTML template → print styles → jsPDF.html() or pdf-lib
+  Store generated PDF hash in attachment optional cache
+
+UPLOADS
+  - IOU, petty cash, reimbursement, permanent refund, cash deposit,
+    incentive CSV, lead CSV
+  - Flow: file input → blob → attachments store → path on entity
+  - Max size 5MB per file (configurable)
+  - Preview: images inline; PDF iframe
+
+EXPORT / BACKUP
+  - Settings → Export all data JSON (encrypted optional)
+  - Import replaces DB with confirm + backup prompt
+
+
+================================================================================
+16. OFFLINE, SYNC & CONFLICT RESOLUTION
+================================================================================
+
+PHASE 1 (Local only)
+  - Fully offline capable after initial seed load
+  - Service worker caches static assets (not API)
+
+PHASE 3 (Hybrid)
+  - syncQueue: { op: 'CREATE_BILL', payload, idempotencyKey }
+  - Push on reconnect; server returns canonical ids → map local temp ids
+  - Conflict strategy:
+      Last-write-wins for masters with version field
+      Financial documents: server wins; client shows merge UI
+      stockLedger: never LWW — replay transactions server-side
+
+CLOCK SKEW
+  - Use server time when remote; local ISO strings when offline
+  - Day-close uses branch timezone (Asia/Kolkata default)
+
+
+================================================================================
+17. SECURITY MODEL (CLIENT TRUST BOUNDARY)
+================================================================================
+
+  - Passwords: bcrypt verify client-side against seed hash (demo only)
+  - Production: remote auth only; local stores refresh token encrypted
+  - RBAC: enforced in services (defense in depth), not just hidden buttons
+  - Audit log: immutable append
+  - Sensitive export: warn + exclude attachment blobs option
+  - Session timeout: 8h default; configurable
+
+
+================================================================================
+18. TESTING STRATEGY & E2E ACCEPTANCE MATRIX
+================================================================================
+
+UNIT (Vitest)
+  - billingService: balance calc, payment guard, credit note
+  - financeClosureService: maker-checker, day lock
+  - workflowEngine: each hook in isolation with mock repos
+  - taskQueueService: section counts per fixture DB
+
+INTEGRATION
+  - Dexie in-memory fake indexedDB
+  - Full CHAIN-01 through CHAIN-15 in one test file per chain
+
+E2E (Playwright)
+  - Role switch helper
+  - Visual regression on shell + bill detail (optional)
+  - PDF smoke: download exists, size > 0
+
+ACCEPTANCE MATRIX (release gate)
+  ┌─────────────────────┬────────┬──────────┬─────────┐
+  │ Area                │ Unit   │ Chain E2E│ Manual  │
+  ├─────────────────────┼────────┼──────────┼─────────┤
+  │ Auth + RBAC         │   ✓    │    ✓     │    —    │
+  │ Clinical chain      │   ✓    │  CHAIN-01│    ✓    │
+  │ Payment guard       │   ✓    │  CHAIN-05│    —    │
+  │ Day close MC        │   ✓    │  CHAIN-06│    ✓    │
+  │ Supply chain        │   ✓    │ CHAIN-07-8│   ✓    │
+  │ Pharmacy B2B        │   ✓    │  CHAIN-04│    —    │
+  │ Sales invoice       │   ✓    │ CHAIN-12 │    —    │
+  │ Task queue          │   ✓    │    ✓     │    ✓    │
+  │ PDF generation      │   —    │    ✓     │    ✓    │
+  │ All report pages    │   —    │    —     │  smoke  │
+  └─────────────────────┴────────┴──────────┴─────────┘
+
+PORT smoke-workflow.mjs
+  - Reimplement as Playwright spec or Node script hitting LocalAdapter
+  - Must pass before release tag
+
+
+================================================================================
+19. IMPLEMENTATION PHASES & DEFINITION OF DONE
+================================================================================
+
+PHASE 0 — Foundation (Week 1-2)
+  [ ] Vite MPA scaffold, shell, router, login
+  [ ] Dexie schema v1 + seed import
+  [ ] LocalAdapter + authService + permissionGuard
+  DoD: login as all 9 roles; nav filtered correctly
+
+PHASE 1 — Clinical + Billing core (Week 3-5)
+  [ ] Customer, appointment, procedure, clinical wizard
+  [ ] billingService + workflow engine hooks (appointment → bill)
+  [ ] Task queue clinical + accounts sections
+  DoD: CHAIN-01, CHAIN-02, CHAIN-05 pass
+
+PHASE 2 — Finance + Pharmacy + Sales (Week 6-8)
+  [ ] Payment collection, advances, refunds
+  [ ] Day close submit/approve/lock
+  [ ] Pharmacy B2B, service B2B, sales invoice guards
+  [ ] Client PDFs (bill, receipt)
+  DoD: CHAIN-04, CHAIN-06, CHAIN-12, CHAIN-13 pass
+
+PHASE 3 — Inventory + Purchase + Warehouse (Week 9-11)
+  [ ] Indents, transfers, consumption, kit shortfall
+  [ ] PO, GRN, work orders, dispatch
+  DoD: CHAIN-07, CHAIN-08, CHAIN-14 pass
+
+PHASE 4 — Operations + Corporate + Reports (Week 12-14)
+  [ ] IOU, petty cash, reimbursement, tickets, incentives
+  [ ] Report pages (read-only query layer)
+  [ ] Master data registry screens
+  DoD: CHAIN-09, CHAIN-10, CHAIN-11, CHAIN-15 pass
+
+PHASE 5 — Hardening (Week 15-16)
+  [ ] Full E2E suite green
+  [ ] Export/import backup
+  [ ] Netlify deploy + README
+  [ ] RemoteAdapter stub (interface only)
+  DoD: All Section 8 workflows marked PASS in test matrix
+
+WORKFLOW TRACEABILITY
+  Each workflow W-* maps to a test id in tests/workflows/
+  CI: npm run test:unit && npm run test:e2e
+
+
+================================================================================
+20. APPENDIX A — ENTITY RELATIONSHIP SUMMARY
+================================================================================
+
+  Customer 1─* Appointment *─1 Consultant(User)
+  Customer 1─* Procedure *─0..1 Bill (service)
+  Procedure *─0..1 Bill (pharmacy via pharmacyBillId)
+  Procedure *─0..1 TreatmentSlip
+  Bill 1─* BillLine, Payment, Refund, CreditNote
+  Customer 1─* Advance; Advance *─* Bill (applications)
+  Branch 1─* StockLedger, DayClose, Indent
+  Indent → StockOutward → StockLedger
+  PurchaseOrder → GRN → StockLedger
+  WorkOrder → completion → StockLedger
+  SalesOrder → SalesInvoice → Bill
+  FollowUp *─1 Customer (drives call center + accounts queues)
+
+
+================================================================================
+21. APPENDIX B — PERMISSION CODE REFERENCE
+================================================================================
+
+  dashboard.view | dashboard.inflow | dashboard.sales | dashboard.branch |
+  dashboard.treatment | dashboard.biometric | dashboard.stock_inward
+
+  customer.view | customer.create | customer.schedule | customer.consult |
+  customer.photos | customer.treatment
+
+  appointments.view | appointments.create | appointments.procedures |
+  appointments.followup
+
+  billing.view | billing.create | billing.payments | billing.cancel |
+  billing.refunds | billing.advances | billing.installments | billing.loans |
+  billing.pharmacy | billing.pharmacy.b2b | billing.service.b2b |
+  billing.maintenance
+
+  inventory.view | inventory.products | inventory.stock | inventory.indent |
+  inventory.authorize | inventory.clinical | inventory.transfer |
+  inventory.outward
+
+  purchase.view | purchase.vendors | purchase.po | purchase.grn |
+  purchase.workorder
+
+  sales.view | sales.create | sales.invoice
+
+  finance.view | finance.close.submit | finance.close.approve |
+  finance.incentives
+
+  operations.view | operations.iou | operations.petty | operations.tickets
+
+  callcenter.view | callcenter.followup
+
+  warehouse.view | warehouse.dispatch
+
+  reports.view | reports.sales | reports.branches | reports.customers |
+  reports.inventory | reports.consultants | reports.incentives | reports.gst |
+  reports.targets
+
+  master.reference | master.treatments | master.targets | master.tickets |
+  master.discounts
+
+  portal.view | portal.corporate | portal.consultant | portal.accounts
+
+
+================================================================================
+22. APPENDIX C — SCREEN REGISTRY PARITY MAP
+================================================================================
+
+Every entry in src/config/screenRegistry.js must have a corresponding client
+route. Implementation priority:
+
+  P0 (blocking chains): clinical workflow, billing detail, day-close,
+     appointments, call-center follow-ups, inventory clinical consumption,
+     portal pages, task queue
+
+  P1 (finance complete): advances, loans, installments, AR aging, incentives
+
+  P2 (supply chain): purchase, warehouse, kit shortfall, indents
+
+  P3 (masters + long-tail reports): registry screens type master/report
+
+Tracking spreadsheet column per screen:
+  screenId | route | phase | workflowId | e2eTest | status
+
+
+================================================================================
+END OF DOCUMENT
+
+For the exhaustive screen-by-screen specification (650+ screens, field-level),
+see: docs/VCare-Local-First-MPA-FULL-SPEC.txt
+Regenerate after codebase changes: node scripts/generate-local-first-spec.mjs
+
+Next action: approve Phase 0 kickoff OR request Phase 0 implementation in-repo
+under /client-local/ with Dexie schema and CHAIN-01 E2E as first milestone.

@@ -1,0 +1,50 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Payments') %}
+{% endcall %}
+
+<div class="erp-card erp-table-card">
+  <div class="erp-card-header">
+    <h3 class="font-semibold text-slate-900">Recent Payments</h3>
+    <span class="text-xs text-slate-500">{{ payments | length }} records</span>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Bill No</th>
+          <th>Customer</th>
+          <th>Amount</th>
+          <th>Mode</th>
+          <th>Reference</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in payments %}
+        <tr>
+          <td class="text-xs">{{ p.paymentDate | datetime }}</td>
+          <td>
+            <a href="/billing/{{ p.bill.id }}" class="text-accent-600 hover:underline font-mono text-xs">{{ p.bill.billNo }}</a>
+            <a href="/billing/{{ p.bill.id }}/pdf" class="text-slate-400 hover:text-accent-600 text-xs ml-1" target="_blank">PDF</a>
+          </td>
+          <td>{{ p.bill.customer.firstName }} {{ p.bill.customer.lastName }}</td>
+          <td class="font-medium text-emerald-600">{{ p.amount | currency }}</td>
+          <td><span class="erp-badge-neutral">{{ p.paymentMode }}</span></td>
+          <td class="font-mono text-xs">{{ p.referenceNo or '—' }}</td>
+          <td class="text-xs whitespace-nowrap">
+            <a href="/finance/receipt/{{ p.id }}" class="text-accent-600" target="_blank">Receipt</a>
+            <a href="/finance/receipt/{{ p.id }}/pdf" class="text-slate-500 hover:text-accent-600 ml-1" target="_blank">PDF</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="erp-empty-cell">No payments recorded</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

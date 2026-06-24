@@ -1,0 +1,44 @@
+{% extends layout %}
+{% block content %}
+<div class="max-w-lg mx-auto border border-slate-200 rounded-lg p-8">
+  <div class="no-print mb-4 flex gap-2 justify-end">
+    <a href="/finance/receipt/{{ payment.id }}/pdf" class="erp-btn-secondary text-sm" target="_blank">Download PDF</a>
+    <button type="button" onclick="window.print()" class="erp-btn-primary text-sm">Print</button>
+  </div>
+  <div class="text-center border-b border-slate-200 pb-4 mb-6">
+    <h1 class="text-xl font-bold">{{ branch.name }}</h1>
+    <p class="text-sm text-slate-500">Payment Receipt</p>
+    <p class="font-mono text-lg mt-2">{{ receiptNo }}</p>
+  </div>
+  <dl class="space-y-3 text-sm">
+    <div class="flex justify-between"><dt class="text-slate-500">Bill No</dt><dd class="font-mono">{{ bill.billNo }}</dd></div>
+    <div class="flex justify-between"><dt class="text-slate-500">Customer</dt><dd>{{ customer.firstName }} {{ customer.lastName }}</dd></div>
+    <div class="flex justify-between"><dt class="text-slate-500">UHID</dt><dd class="font-mono">{{ customer.uhid }}</dd></div>
+    <div class="flex justify-between"><dt class="text-slate-500">Payment Date</dt><dd>{{ payment.paymentDate | datetime }}</dd></div>
+    <div class="flex justify-between"><dt class="text-slate-500">Mode</dt><dd>{{ payment.paymentMode }}</dd></div>
+    {% if payment.referenceNo %}<div class="flex justify-between"><dt class="text-slate-500">Reference</dt><dd class="font-mono">{{ payment.referenceNo }}</dd></div>{% endif %}
+    <div class="flex justify-between text-lg font-bold border-t border-slate-200 pt-4 mt-4">
+      <dt>Amount Received</dt><dd class="text-emerald-600">{{ payment.amount | currency }}</dd>
+    </div>
+    <div class="flex justify-between text-sm"><dt class="text-slate-500">Bill Balance</dt><dd>{{ bill.balanceAmount | currency }}</dd></div>
+  </dl>
+  {% if journalEntry %}
+  <div class="mt-6 border-t border-slate-200 pt-4">
+    <p class="text-xs font-semibold text-slate-600 mb-2">Ledger Entry ({{ journalEntry.entryNo }})</p>
+    <table class="w-full text-xs">
+      <thead><tr class="text-slate-500"><th class="text-left">Account</th><th class="text-right">Dr</th><th class="text-right">Cr</th></tr></thead>
+      <tbody>
+        {% for line in journalEntry.lines %}
+        <tr>
+          <td>{{ line.account.name }}</td>
+          <td class="text-right">{% if line.debit > 0 %}{{ line.debit | currency }}{% else %}—{% endif %}</td>
+          <td class="text-right">{% if line.credit > 0 %}{{ line.credit | currency }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+  <p class="text-xs text-slate-400 text-center mt-8">Computer-generated receipt · {{ appName }}</p>
+</div>
+{% endblock %}

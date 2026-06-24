@@ -1,0 +1,59 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Target vs Achievement') %}
+{% endcall %}
+<p class="text-sm text-slate-500 mb-6">Current month branch performance against targets</p>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+  {% for a in achievement %}
+  <div class="erp-card">
+    <div class="erp-card-body">
+      <div class="flex items-start justify-between mb-3">
+        <div>
+          <h3 class="font-semibold text-slate-900">{{ a.branch.name }}</h3>
+          <span class="text-xs text-slate-500">Target: {{ a.target | currency }}</span>
+        </div>
+        <span class="text-lg font-bold {% if a.progress >= 100 %}text-emerald-600{% elif a.progress >= 75 %}text-amber-600{% else %}text-red-500{% endif %}">{{ a.progress | round(0) }}%</span>
+      </div>
+      <div class="erp-stat-bar mb-2">
+        <div class="erp-stat-bar-fill {% if a.progress >= 100 %}bg-emerald-500{% elif a.progress >= 75 %}bg-amber-500{% else %}bg-red-400{% endif %}" style="width: {% if a.progress > 100 %}100{% else %}{{ a.progress }}{% endif %}%"></div>
+      </div>
+      <div class="flex justify-between text-xs text-slate-500">
+        <span>Achieved: <strong class="text-slate-700">{{ a.achieved | currency }}</strong></span>
+        <span>Gap: <strong class="text-slate-700">{% if a.target > a.achieved %}{{ (a.target - a.achieved) | currency }}{% else %}₹0{% endif %}</strong></span>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-span-full erp-card"><div class="erp-card-body text-center text-slate-400 py-12">No targets configured for this month</div></div>
+  {% endfor %}
+</div>
+
+<div class="erp-card erp-table-card">
+  <div class="erp-card-header"><h3 class="font-semibold">Detailed Breakdown</h3></div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr><th>Branch</th><th>Target</th><th>Achieved</th><th>Gap</th><th>Progress</th></tr>
+      </thead>
+      <tbody>
+        {% for a in achievement %}
+        <tr>
+          <td class="font-medium">{{ a.branch.name }}</td>
+          <td>{{ a.target | currency }}</td>
+          <td class="font-medium text-emerald-600">{{ a.achieved | currency }}</td>
+          <td class="{% if a.target > a.achieved %}text-amber-600{% else %}text-emerald-600{% endif %}">{% if a.target > a.achieved %}{{ (a.target - a.achieved) | currency }}{% else %}₹0{% endif %}</td>
+          <td>
+            <div class="flex items-center gap-2">
+              <div class="erp-stat-bar w-24"><div class="erp-stat-bar-fill" style="width: {% if a.progress > 100 %}100{% else %}{{ a.progress }}{% endif %}%"></div></div>
+              <span class="text-xs">{{ a.progress | round(1) }}%</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

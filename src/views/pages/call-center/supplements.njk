@@ -1,0 +1,60 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Supplements Follow-Up') %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="erp-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Schedule Follow-Up</h3></div>
+    <form method="POST" action="/call-center/follow-ups" class="erp-card-body space-y-4">
+      <input type="hidden" name="type" value="SUPPLEMENTS">
+      <input type="hidden" name="redirect" value="/call-center/supplements">
+      <div>
+        <label class="erp-label">Customer</label>
+        <select name="customerId" class="erp-select" required>
+          {% for c in customers %}<option value="{{ c.id }}">{{ c.firstName }} {{ c.lastName }} ({{ c.uhid }})</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Scheduled At</label>
+        <input type="datetime-local" name="scheduledAt" class="erp-input">
+      </div>
+      <div>
+        <label class="erp-label">Notes</label>
+        <textarea name="feedback" class="erp-input" rows="2"></textarea>
+      </div>
+      <button type="submit" class="erp-btn-primary w-full">Schedule</button>
+    </form>
+  </div>
+
+    <div class="lg:col-span-2 erp-card erp-table-card">
+      <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead><tr><th>Customer</th><th>Branch</th><th>Status</th><th>Scheduled</th><th>Feedback</th><th></th></tr></thead>
+      <tbody>
+        {% for f in followUps %}
+        <tr>
+          <td>{{ f.customer.firstName }} {{ f.customer.lastName }}</td>
+          <td>{{ f.customer.branch.name }}</td>
+          <td>{{ statusBadge(f.status) }}</td>
+          <td class="text-xs">{{ f.scheduledAt | datetime if f.scheduledAt else '—' }}</td>
+          <td class="text-sm max-w-xs truncate">{{ f.feedback or '—' }}</td>
+          <td>
+            {% if f.status == 'PENDING' %}
+            <form method="POST" action="/call-center/follow-ups/{{ f.id }}/complete" class="inline">
+              <button type="submit" class="erp-btn-secondary text-xs py-1">Done</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="erp-empty-cell">No supplement follow-ups</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+      </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Dispatch Queue') %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="erp-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Approved Indents ({{ pendingIndents | length }})</h3></div>
+    <div class="divide-y divide-surface-border">
+      {% for ind in pendingIndents %}
+      <div class="p-4">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <span class="font-mono text-xs font-medium">{{ ind.indentNo }}</span>
+            <div class="text-sm text-slate-600">{{ ind.branch.name }} · {{ ind.type }}</div>
+          </div>
+          {{ statusBadge(ind.status) }}
+        </div>
+        <ul class="text-xs text-slate-500 mb-3 space-y-0.5">
+          {% for item in ind.items %}
+          <li>{{ item.product.name }} × {{ item.quantity - item.fulfilled }}</li>
+          {% endfor %}
+        </ul>
+        <form method="POST" action="/warehouse/dispatch/indent/{{ ind.id }}">
+          <button type="submit" class="erp-btn-primary text-xs" onclick="return confirm('Fulfill and dispatch indent?')">Dispatch</button>
+        </form>
+      </div>
+      {% else %}
+      <div class="p-6 text-center text-slate-400">No indents awaiting dispatch</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="erp-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Stock Transfers ({{ pendingTransfers | length }})</h3></div>
+    <div class="divide-y divide-surface-border">
+      {% for t in pendingTransfers %}
+      <div class="p-4">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <span class="font-mono text-xs font-medium">{{ t.transferNo }}</span>
+            <div class="text-sm">→ {{ t.toBranch.name }}</div>
+          </div>
+          {{ statusBadge(t.status) }}
+        </div>
+        <ul class="text-xs text-slate-500 mb-3 space-y-0.5">
+          {% for item in t.items %}
+          <li>{{ item.product.name }} × {{ item.quantity }}</li>
+          {% endfor %}
+        </ul>
+        <form method="POST" action="/warehouse/dispatch/transfer/{{ t.id }}">
+          <button type="submit" class="erp-btn-primary text-xs">Complete Transfer</button>
+        </form>
+      </div>
+      {% else %}
+      <div class="p-6 text-center text-slate-400">No transfers pending</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

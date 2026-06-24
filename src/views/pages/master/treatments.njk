@@ -1,0 +1,29 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+{% block content %}
+{% call pageToolbar('Treatment Master', 'Clinical treatment catalogue') %}
+  {{ modalTrigger('Add Treatment', '/master/treatments/form', 'New Treatment', 'lg') }}
+{% endcall %}
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Duration</th><th>Base Price</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for t in treatments %}
+        <tr>
+          <td class="font-mono text-xs">{{ t.code }}</td>
+          <td class="font-medium">{{ t.name }}</td>
+          <td><span class="erp-badge-neutral">{{ t.category }}</span></td>
+          <td>{{ t.duration }} min</td>
+          <td>{{ t.basePrice | currency }}</td>
+          <td>{% if t.isActive %}<span class="erp-badge-success">Active</span>{% else %}<span class="erp-badge-danger">Inactive</span>{% endif %}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="erp-empty-cell">No treatments defined</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

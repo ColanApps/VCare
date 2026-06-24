@@ -1,0 +1,79 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Physical Stock Audit') %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Record Physical Count</h3></div>
+    <form method="POST" action="/inventory/physical-stock" class="erp-card-body space-y-4">
+      <div>
+        <label class="erp-label">Branch *</label>
+        <select name="branchId" class="erp-select" required id="branch-select">
+          {% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Product *</label>
+        <select name="productId" class="erp-select" required id="product-select">
+          {% for p in products %}<option value="{{ p.id }}" data-sku="{{ p.sku }}">{{ p.name }} ({{ p.sku }})</option>{% endfor %}
+        </select>
+      </div>
+      <div class="p-3 bg-slate-50 rounded-lg text-sm">
+        <span class="text-slate-500">System qty:</span>
+        <span class="font-medium" id="system-qty">—</span>
+      </div>
+      <div>
+        <label class="erp-label">Physical Qty *</label>
+        <input type="number" name="physicalQty" class="erp-input" min="0" required>
+      </div>
+      <div>
+        <label class="erp-label">Notes</label>
+        <textarea name="notes" class="erp-input" rows="2"></textarea>
+      </div>
+      <button type="submit" class="erp-btn-primary w-full">Record Audit</button>
+    </form>
+  </div>
+
+  <div class="lg:col-span-2 erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Audit History</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+      <thead><tr><th>Audit No</th><th>Branch</th><th>Product</th><th>System</th><th>Physical</th><th>Variance</th><th>Date</th></tr></thead>
+      <tbody>
+        {% for a in audits %}
+        <tr>
+          <td class="font-mono text-xs">{{ a.auditNo }}</td>
+          <td>{{ a.branch.name }}</td>
+          <td>{{ a.product.name }}</td>
+          <td>{{ a.systemQty }}</td>
+          <td>{{ a.physicalQty }}</td>
+          <td class="font-medium {% if a.variance < 0 %}text-red-600{% elif a.variance > 0 %}text-emerald-600{% endif %}">{{ a.variance }}</td>
+          <td class="text-xs text-slate-500">{{ a.auditedAt | datetime }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="erp-empty-cell">No audits recorded</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const stockMap = {
+  {% for s in stocks %}"{{ s.branchId }}::{{ s.productId }}": {{ s.quantity }},{% endfor %}
+};
+function updateSystemQty() {
+  const branchId = document.getElementById('branch-select').value;
+  const productId = document.getElementById('product-select').value;
+  const qty = stockMap[`${branchId}::${productId}`];
+  document.getElementById('system-qty').textContent = qty !== undefined ? qty : '0';
+}
+document.getElementById('branch-select')?.addEventListener('change', updateSystemQty);
+document.getElementById('product-select')?.addEventListener('change', updateSystemQty);
+updateSystemQty();
+</script>
+{% endblock %}

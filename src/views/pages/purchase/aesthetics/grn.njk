@@ -1,0 +1,95 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Aesthetics — Center GRN') %}
+{% endcall %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Record GRN</h3></div>
+    <form method="POST" action="/purchase/aesthetics/grn" id="agr-form" class="erp-card-body space-y-4">
+      <div>
+        <label class="erp-label">Aesthetics PO *</label>
+        <select name="poId" id="apo-select" class="erp-select" required>
+          <option value="">Select approved PO</option>
+          {% for po in approvedPOs %}
+          <option value="{{ po.id }}">{{ po.poNo }} — {{ po.branch.name if po.branch else '' }} ({{ po.totalAmount | currency }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Receiving Branch *</label>
+        <select name="branchId" class="erp-select" required>
+          {% for b in branches %}
+          <option value="{{ b.id }}" {% if warehouse and warehouse.id == b.id %}selected{% endif %}>{{ b.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div id="agr-items-section" class="hidden">
+        <table class="erp-table text-sm"><thead><tr><th>Product</th><th>Ordered</th><th>Received</th><th>Qty</th></tr></thead>
+        <tbody id="agr-items-body"></tbody></table>
+      </div>
+      <input type="hidden" name="items" id="agr-items-json" value="[]">
+      <div><label class="erp-label">Notes</label><textarea name="notes" class="erp-input" rows="2"></textarea></div>
+      <button type="submit" class="erp-btn-primary w-full">Submit for Quality Check</button>
+    </form>
+  </div>
+  <div class="lg:col-span-2 erp-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Recent GRNs</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+      <thead><tr><th>GRN No</th><th>PO</th><th>Center</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for g in grns %}
+        <tr>
+          <td class="font-mono text-xs">{{ g.grnNo }}</td>
+          <td>{{ g.po.poNo }}</td>
+          <td>{{ g.po.branch.name if g.po.branch else '—' }}</td>
+          <td>{{ statusBadge(g.status) }}</td>
+          <td>{% if g.status == 'QUALITY_CHECK' %}<a href="/purchase/aesthetics/grn/{{ g.id }}/quality" class="text-xs text-blue-600">QC</a>{% endif %}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="erp-empty-cell">No GRNs yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const apoData = {{ approvedPOs | json | safe }};
+const poMap = {};
+apoData.forEach(po => {
+  poMap[po.id] = (po.items || []).map(item => ({
+    productId: item.productId,
+    name: item.product?.name || 'Product',
+    ordered: item.quantity,
+    received: item.received || 0,
+    remaining: item.quantity - (item.received || 0),
+  }));
+});
+const agrItems = [];
+function renderAgrItems(poId) {
+  const section = document.getElementById('agr-items-section');
+  const tbody = document.getElementById('agr-items-body');
+  const input = document.getElementById('agr-items-json');
+  agrItems.length = 0;
+  const items = poMap[poId] || [];
+  if (!items.length) { section.classList.add('hidden'); input.value = '[]'; return; }
+  section.classList.remove('hidden');
+  tbody.innerHTML = items.map((item, i) => {
+    const qty = Math.max(0, item.remaining);
+    agrItems.push({ productId: item.productId, quantity: qty });
+    return `<tr><td>${item.name}</td><td>${item.ordered}</td><td>${item.received}</td>
+      <td><input type="number" class="erp-input w-20 text-sm agr-qty" data-index="${i}" value="${qty}" min="0" max="${item.remaining}"></td></tr>`;
+  }).join('');
+  input.value = JSON.stringify(agrItems);
+  tbody.querySelectorAll('.agr-qty').forEach(el => el.addEventListener('input', () => {
+    agrItems[parseInt(el.dataset.index, 10)].quantity = parseInt(el.value, 10) || 0;
+    input.value = JSON.stringify(agrItems);
+  }));
+}
+document.getElementById('apo-select')?.addEventListener('change', function() { renderAgrItems(this.value); });
+</script>
+{% endblock %}

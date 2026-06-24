@@ -1,0 +1,44 @@
+{# Master screen form — loaded in modal via HTMX #}
+<form method="POST" action="{{ screen.path }}{% if record %}/{{ record.id }}{% endif %}" class="erp-modal-form"
+  hx-post="{{ screen.path }}{% if record %}/{{ record.id }}{% endif %}"
+  hx-target="#master-table-body"
+  hx-swap="innerHTML">
+  <div class="erp-form-grid">
+    {% for field in fields %}
+    <div class="erp-field">
+      <label class="erp-label" for="field-{{ field }}">{{ field }}</label>
+      {% set val = record[field] if record else '' %}
+      {% if field == 'customerId' and customers %}
+      <select name="{{ field }}" id="field-{{ field }}" class="erp-select" required>
+        <option value="">Select customer</option>
+        {% for c in customers %}<option value="{{ c.id }}" {% if val == c.id %}selected{% endif %}>{{ c.uhid }} — {{ c.firstName }} {{ c.lastName }}</option>{% endfor %}
+      </select>
+      {% elif field == 'productId' and products %}
+      <select name="{{ field }}" id="field-{{ field }}" class="erp-select" required>
+        <option value="">Select product</option>
+        {% for p in products %}<option value="{{ p.id }}" {% if val == p.id %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+      </select>
+      {% elif field == 'branchId' and branches %}
+      <select name="{{ field }}" id="field-{{ field }}" class="erp-select">
+        <option value="">Select branch</option>
+        {% for b in branches %}<option value="{{ b.id }}" {% if val == b.id %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+      </select>
+      {% elif field == 'itemsJson' %}
+      <textarea name="{{ field }}" id="field-{{ field }}" class="erp-input" rows="2" placeholder='[{"productId":"...","qty":1}]'>{{ val }}</textarea>
+      {% elif field == 'complaint' or field == 'notes' or field == 'description' or field == 'findings' or field == 'purpose' %}
+      <textarea name="{{ field }}" id="field-{{ field }}" class="erp-input" rows="3">{{ val }}</textarea>
+      {% elif field == 'expiryDate' or field == 'recordDate' %}
+      <input type="date" name="{{ field }}" id="field-{{ field }}" class="erp-input" value="{% if val %}{{ val | date('yyyy-MM-dd') }}{% endif %}">
+      {% elif field == 'openingCash' or field == 'closingCash' or field == 'amount' or field == 'totalAmount' or field == 'basePrice' or field == 'ratePercent' or field == 'flatAmount' %}
+      <input type="number" name="{{ field }}" id="field-{{ field }}" class="erp-input" step="0.01" value="{{ val }}">
+      {% elif field == 'headcount' or field == 'score' or field == 'periodMonth' or field == 'periodYear' %}
+      <input type="number" name="{{ field }}" id="field-{{ field }}" class="erp-input" value="{{ val }}">
+      {% else %}
+      <input type="text" name="{{ field }}" id="field-{{ field }}" class="erp-input" value="{{ val }}">
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% from "macros/ui.njk" import formFooter %}
+  {{ formFooter() }}
+</form>

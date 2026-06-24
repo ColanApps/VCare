@@ -1,0 +1,73 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar(stockType == 'CLINICAL' and 'Clinical Center Stock' or 'Billable Center Stock') %}
+{% endcall %}
+
+<div class="erp-card mb-6">
+  <div class="erp-card-header"><h3 class="font-semibold">Manual Stock Adjustment</h3></div>
+  <form method="POST" action="/inventory/stock/adjust" class="erp-card-body">
+    <div class="erp-form-grid">
+      <div>
+        <label class="erp-label">Product</label>
+        <select name="productId" class="erp-select" required>
+          {% for p in products %}<option value="{{ p.id }}">{{ p.name }} ({{ p.sku }})</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Branch</label>
+        <select name="branchId" class="erp-select" required>
+          {% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Quantity (+/-)</label>
+        <input type="number" name="quantity" class="erp-input" required placeholder="Use negative to deduct">
+      </div>
+      <div>
+        <label class="erp-label">Notes</label>
+        <input type="text" name="notes" class="erp-input" placeholder="Reason for adjustment">
+      </div>
+    </div>
+    <button type="submit" class="erp-btn-primary mt-4">Adjust Stock</button>
+  </form></div>
+
+<div class="erp-card erp-table-card">
+  <div class="erp-card-header">
+    <h3 class="font-semibold text-slate-900">Stock Levels</h3>
+    <span class="text-xs text-slate-500">{{ stocks | length }} items</span>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>SKU</th>
+          <th>Branch</th>
+          <th>Quantity</th>
+          <th>Reorder Level</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in stocks %}
+        <tr>
+          <td class="font-medium">{{ s.product.name }}</td>
+          <td class="font-mono text-xs">{{ s.product.sku }}</td>
+          <td>{{ s.branch.name }}</td>
+          <td class="font-semibold {% if s.quantity <= s.product.reorderLevel %}text-amber-600{% endif %}">{{ s.quantity | number }}</td>
+          <td>{{ s.product.reorderLevel | number }}</td>
+          <td>
+            {% if s.quantity <= 0 %}<span class="erp-badge-danger">Out of Stock</span>
+            {% elif s.quantity <= s.product.reorderLevel %}<span class="erp-badge-warning">Low Stock</span>
+            {% else %}<span class="erp-badge-success">In Stock</span>{% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="erp-empty-cell">No stock records found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

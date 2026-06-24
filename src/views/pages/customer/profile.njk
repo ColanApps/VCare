@@ -1,0 +1,140 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar(customer.firstName ~ ' ' ~ customer.lastName) %}
+  <a href="/dashboard/journey/{{ customer.id }}" class="erp-btn-secondary text-xs">Journey</a>
+  <a href="/appointments/create?customerId={{ customer.id }}" class="erp-btn-primary text-xs">Book Appointment</a>
+  <a href="/billing/create?customerId={{ customer.id }}" class="erp-btn-secondary text-xs">Create Bill</a>
+{% endcall %}
+
+<div class="flex items-start gap-4 mb-6">
+  <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent-400 to-erp-600 flex items-center justify-center text-white text-xl font-bold shrink-0">
+    {{ customer.firstName[0] }}{{ customer.lastName[0] }}
+  </div>
+  <div>
+    <div class="flex flex-wrap gap-2">
+      <span class="font-mono text-sm text-slate-500">{{ customer.uhid }}</span>
+      <span class="erp-badge-neutral">{{ customer.category }}</span>
+      {{ statusBadge(customer.status) }}
+    </div>
+    <div class="text-sm text-slate-500 mt-1">{{ customer.phone }}{% if customer.email %} · {{ customer.email }}{% endif %}</div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6" x-data="{ tab: 'overview' }">
+  <div class="lg:col-span-1">
+    <div class="erp-card mb-4">
+      <div class="erp-card-body space-y-3 text-sm">
+        <div><span class="text-slate-500">Branch</span><div class="font-medium">{{ customer.branch.name }}</div></div>
+        {% if customer.gender %}<div><span class="text-slate-500">Gender</span><div>{{ customer.gender }}</div></div>{% endif %}
+        {% if customer.dateOfBirth %}<div><span class="text-slate-500">Date of Birth</span><div>{{ customer.dateOfBirth | date }}</div></div>{% endif %}
+        {% if customer.address %}<div><span class="text-slate-500">Address</span><div>{{ customer.address }}</div></div>{% endif %}
+        {% if customer.leadSource %}<div><span class="text-slate-500">Lead Source</span><div>{{ customer.leadSource }}</div></div>{% endif %}
+        <div><span class="text-slate-500">Registered</span><div>{{ customer.registeredAt | date }}</div></div>
+      </div>
+    </div>
+    <nav class="erp-card">
+      <div class="p-2 space-y-0.5">
+        <button @click="tab = 'overview'" :class="tab === 'overview' ? 'bg-accent-50 text-accent-700' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium">Overview</button>
+        <button @click="tab = 'appointments'" :class="tab === 'appointments' ? 'bg-accent-50 text-accent-700' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium">Appointments</button>
+        <button @click="tab = 'consultations'" :class="tab === 'consultations' ? 'bg-accent-50 text-accent-700' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium">Consultations</button>
+        <button @click="tab = 'bills'" :class="tab === 'bills' ? 'bg-accent-50 text-accent-700' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium">Bills</button>
+        <button @click="tab = 'photos'" :class="tab === 'photos' ? 'bg-accent-50 text-accent-700' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium">Photos</button>
+        <button @click="tab = 'procedures'" :class="tab === 'procedures' ? 'bg-accent-50 text-accent-700' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium">Procedures</button>
+      </div>
+    </nav>
+  </div>
+
+  <div class="lg:col-span-3">
+    <div x-show="tab === 'overview'" x-cloak class="erp-card erp-table-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Summary</h3></div>
+      <div class="erp-card-body grid grid-cols-3 gap-4">
+        <div class="erp-kpi"><div class="erp-kpi-label">Appointments</div><div class="erp-kpi-value">{{ customer.appointments | length }}</div></div>
+        <div class="erp-kpi"><div class="erp-kpi-label">Consultations</div><div class="erp-kpi-value">{{ customer.consultations | length }}</div></div>
+        <div class="erp-kpi"><div class="erp-kpi-label">Bills</div><div class="erp-kpi-value">{{ customer.bills | length }}</div></div>
+      </div>
+    </div>
+
+    <div x-show="tab === 'appointments'" x-cloak class="erp-card erp-table-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Appointments</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+        <thead><tr><th>Date</th><th>No</th><th>Type</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for a in customer.appointments %}
+          <tr>
+            <td class="text-xs">{{ a.scheduledAt | datetime }}</td>
+            <td class="font-mono text-xs">{{ a.appointmentNo }}</td>
+            <td><span class="erp-badge-neutral">{{ a.type }}</span></td>
+            <td>{{ statusBadge(a.status) }}</td>
+          </tr>
+          {% else %}<tr><td colspan="4" class="erp-empty-cell">No appointments</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      </div></div>
+
+    <div x-show="tab === 'consultations'" x-cloak class="erp-card erp-table-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Consultations</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+        <thead><tr><th>Date</th><th>Consultant</th><th>Type</th><th>Diagnosis</th></tr></thead>
+        <tbody>
+          {% for c in customer.consultations %}
+          <tr>
+            <td class="text-xs">{{ c.consultedAt | datetime }}</td>
+            <td>{{ c.consultant.firstName }} {{ c.consultant.lastName }}</td>
+            <td><span class="erp-badge-neutral">{{ c.type }}</span></td>
+            <td class="text-sm">{{ c.diagnosis or '—' }}</td>
+          </tr>
+          {% else %}<tr><td colspan="4" class="erp-empty-cell">No consultations</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      </div></div>
+
+    <div x-show="tab === 'bills'" x-cloak class="erp-card erp-table-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Bills</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+        <thead><tr><th>Bill No</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for b in customer.bills %}
+          <tr>
+            <td><a href="/billing/{{ b.id }}" class="text-accent-600 hover:underline font-mono text-xs">{{ b.billNo }}</a></td>
+            <td class="text-xs">{{ b.billDate | date }}</td>
+            <td class="font-medium">{{ b.totalAmount | currency }}</td>
+            <td>{{ statusBadge(b.status) }}</td>
+          </tr>
+          {% else %}<tr><td colspan="4" class="erp-empty-cell">No bills</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      </div></div>
+
+    <div x-show="tab === 'photos'" x-cloak class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Photos</h3></div>
+      <div class="erp-card-body grid grid-cols-3 gap-3">
+        {% for p in customer.photos %}
+        <div class="aspect-square bg-slate-100 rounded-lg flex items-center justify-center text-xs text-slate-400">{{ p.type }}</div>
+        {% else %}<p class="col-span-3 text-center text-slate-400 py-6">No photos</p>{% endfor %}
+      </div>
+    </div>
+
+    <div x-show="tab === 'procedures'" x-cloak class="erp-card erp-table-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Procedures</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+        <thead><tr><th>Procedure No</th><th>Scheduled</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for p in customer.procedures %}
+          <tr>
+            <td class="font-mono text-xs">{{ p.procedureNo }}</td>
+            <td class="text-xs">{{ p.scheduledAt | datetime }}</td>
+            <td>{{ statusBadge(p.status) }}</td>
+          </tr>
+          {% else %}<tr><td colspan="3" class="erp-empty-cell">No procedures</td></tr>{% endfor %}
+        </tbody>
+      </table>
+  </div>
+  </div>
+</div>
+{% endblock %}

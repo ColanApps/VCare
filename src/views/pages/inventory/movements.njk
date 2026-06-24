@@ -1,0 +1,45 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Stock Movement Log') %}
+{% endcall %}
+<p class="text-sm text-slate-500 mb-6">{{ movements | length }} recent movements</p>
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>SKU</th>
+          <th>Branch</th>
+          <th>Type</th>
+          <th>Quantity</th>
+          <th>Reference</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in movements %}
+        <tr>
+          <td class="font-medium">{{ m.product.name }}</td>
+          <td class="font-mono text-xs">{{ m.product.sku }}</td>
+          <td>{{ m.branch.name }}</td>
+          <td><span class="erp-badge-neutral">{{ m.movementType | replace('_', ' ') }}</span></td>
+          <td class="font-semibold {% if m.movementType == 'OUTWARD' or m.movementType == 'CONSUMPTION' %}text-red-600{% else %}text-emerald-600{% endif %}">
+            {% if m.movementType == 'OUTWARD' or m.movementType == 'CONSUMPTION' %}−{% else %}+{% endif %}{{ m.quantity | number }}
+          </td>
+          <td class="text-xs">
+            {% if m.referenceType %}{{ m.referenceType }}{% if m.referenceId %} · {{ m.referenceId | truncate(8, true, '') }}{% endif %}{% else %}—{% endif %}
+          </td>
+          <td class="text-xs text-slate-500">{{ m.createdAt | datetime }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="erp-empty-cell">No stock movements recorded</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

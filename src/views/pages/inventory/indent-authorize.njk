@@ -1,0 +1,57 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Indent Authorization') %}
+{% endcall %}
+<p class="text-sm text-slate-500 mb-6">{{ indents | length }} indents</p>
+
+<div class="space-y-4">
+  {% for ind in indents %}
+  <div class="erp-card">
+    <div class="erp-card-header">
+      <div>
+        <h3 class="font-semibold text-slate-900">{{ ind.indentNo }}</h3>
+        <span class="text-xs text-slate-500">{{ ind.branch.name }} · {{ ind.createdBy.firstName }} {{ ind.createdBy.lastName }} · {{ ind.createdAt | date }}</span>
+      </div>
+      {{ statusBadge(ind.status) }}
+    </div>
+    <div class="erp-card-body">
+      <div class="overflow-x-auto">
+      <table class="erp-table mb-4">
+        <thead><tr><th>Product</th><th>SKU</th><th>Quantity</th></tr></thead>
+        <tbody>
+          {% for item in ind.items %}
+          <tr>
+            <td>{{ item.product.name }}</td>
+            <td class="font-mono text-xs">{{ item.product.sku }}</td>
+            <td class="font-medium">{{ item.quantity }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% if ind.notes %}<p class="text-sm text-slate-600 mb-4"><span class="text-slate-500">Notes:</span> {{ ind.notes }}</p>{% endif %}
+      <div class="flex gap-2">
+        {% if ind.status == 'PENDING' %}
+        <form method="POST" action="/inventory/indents/{{ ind.id }}/authorize" class="inline">
+          <input type="hidden" name="action" value="approve">
+          <button type="submit" class="erp-btn-primary text-sm">Approve</button>
+        </form>
+        <form method="POST" action="/inventory/indents/{{ ind.id }}/authorize" class="inline">
+          <input type="hidden" name="action" value="reject">
+          <button type="submit" class="erp-btn-secondary text-sm text-red-600">Reject</button>
+        </form>
+        {% elif ind.status == 'APPROVED' %}
+        <form method="POST" action="/inventory/indents/{{ ind.id }}/fulfill" class="inline">
+          <button type="submit" class="erp-btn-primary text-sm">Fulfill</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="erp-card"><div class="erp-card-body text-center text-slate-400 py-12">No indents</div></div>
+  {% endfor %}
+</div>
+{% endblock %}

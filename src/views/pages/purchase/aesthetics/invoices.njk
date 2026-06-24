@@ -1,0 +1,56 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import formFooter, pageToolbar %}
+{% block content %}
+{% call pageToolbar('Aesthetics — Invoice from GRN') %}
+{% endcall %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Create Invoice</h3></div>
+    <form method="POST" action="/purchase/aesthetics/invoices" class="erp-card-body space-y-4" hx-post="/purchase/aesthetics/invoices" hx-swap="none">
+      <div>
+        <label class="erp-label">Accepted GRN *</label>
+        <select name="grnId" class="erp-select" required>
+          <option value="">Select GRN</option>
+          {% for g in uninvoicedGrns %}
+          <option value="{{ g.id }}">{{ g.grnNo }} — {{ g.po.poNo }} ({{ g.po.vendor.name }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Customer *</label>
+        <select name="customerId" class="erp-select" required>
+          {% for c in customers %}<option value="{{ c.id }}">{{ c.uhid }} — {{ c.firstName }} {{ c.lastName }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="erp-label">Paid Amount</label><input type="number" name="paidAmount" class="erp-input" step="0.01" value="0"></div>
+        <div><label class="erp-label">Payment Mode</label>
+          <select name="paymentMode" class="erp-select"><option>CASH</option><option>CARD</option><option>UPI</option></select>
+        </div>
+      </div>
+      {{ formFooter('Create Invoice') }}
+    </form>
+  </div>
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Recent Invoices</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table text-sm">
+      <thead><tr><th>Bill No</th><th>Customer</th><th>GRN</th><th>Total</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for inv in invoices %}
+        <tr>
+          <td><a href="/billing/{{ inv.id }}" class="font-mono text-xs text-blue-600">{{ inv.billNo }}</a></td>
+          <td>{{ inv.customer.firstName }} {{ inv.customer.lastName }}</td>
+          <td>{{ inv.grn.grnNo if inv.grn else '—' }}</td>
+          <td>{{ inv.totalAmount | currency }}</td>
+          <td>{{ statusBadge(inv.status) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="erp-empty-cell">No invoices yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

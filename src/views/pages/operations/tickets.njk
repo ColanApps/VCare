@@ -1,0 +1,52 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+{% block content %}
+{% call pageToolbar('V Support', 'Internal support tickets and requests') %}
+  {{ modalTrigger('Create Ticket', '/operations/tickets/form', 'New Support Ticket', 'md') }}
+{% endcall %}
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>Ticket No</th>
+          <th>Title</th>
+          <th>Category</th>
+          <th>Priority</th>
+          <th>Assigned To</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Update</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in tickets %}
+        <tr>
+          <td class="font-mono text-xs">{{ t.ticketNo }}</td>
+          <td class="font-medium max-w-xs truncate">{{ t.title }}</td>
+          <td><span class="erp-badge-neutral">{{ t.category }}</span></td>
+          <td>{{ statusBadge(t.priority) }}</td>
+          <td>{% if t.assignedTo %}{{ t.assignedTo.firstName }} {{ t.assignedTo.lastName }}{% else %}—{% endif %}</td>
+          <td>{{ statusBadge(t.status) }}</td>
+          <td class="text-xs text-slate-500">{{ t.createdAt | date }}</td>
+          <td>
+            <form method="POST" action="/operations/tickets/{{ t.id }}/status" class="inline">
+              <select name="status" onchange="this.form.submit()" class="erp-select text-xs py-1">
+                <option value="OPEN" {% if t.status == 'OPEN' %}selected{% endif %}>Open</option>
+                <option value="IN_PROGRESS" {% if t.status == 'IN_PROGRESS' %}selected{% endif %}>In Progress</option>
+                <option value="RESOLVED" {% if t.status == 'RESOLVED' %}selected{% endif %}>Resolved</option>
+                <option value="CLOSED" {% if t.status == 'CLOSED' %}selected{% endif %}>Closed</option>
+              </select>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="erp-empty-cell">No tickets found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

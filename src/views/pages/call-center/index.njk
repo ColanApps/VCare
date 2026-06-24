@@ -1,0 +1,44 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar, hubTile %}
+{% block content %}
+{% call pageToolbar('Call Center', 'Lead intake, follow-ups & appointment booking') %}
+  <a href="/call-center/dialer" class="erp-btn-primary text-sm">Open Dialer</a>
+  <a href="/dashboard/my-tasks" class="erp-btn-secondary text-sm">My Tasks</a>
+{% endcall %}
+
+<div class="erp-kpi-grid">
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">Pending Advance</div>
+    <div class="erp-kpi-value mt-1">{{ stats.pendingAdvance | number }}</div>
+    <a href="/call-center/follow-ups?type=PENDING_ADVANCE&status=PENDING" class="text-xs text-accent-600 mt-2 inline-block hover:underline">View all →</a>
+  </div>
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">Not Joined</div>
+    <div class="erp-kpi-value mt-1">{{ stats.notJoined | number }}</div>
+    <a href="/call-center/not-joined" class="text-xs text-accent-600 mt-2 inline-block hover:underline">View all →</a>
+  </div>
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">Supplements</div>
+    <div class="erp-kpi-value mt-1">{{ stats.supplements | number }}</div>
+    <a href="/call-center/follow-ups?type=SUPPLEMENTS&status=PENDING" class="text-xs text-accent-600 mt-2 inline-block hover:underline">View all →</a>
+  </div>
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">Total Pending</div>
+    <div class="erp-kpi-value mt-1">{{ stats.total | number }}</div>
+    <a href="/call-center/follow-ups?status=PENDING" class="text-xs text-accent-600 mt-2 inline-block hover:underline">View all →</a>
+  </div>
+</div>
+
+<h2 class="erp-section-title">Workflows</h2>
+<div class="erp-hub-grid">
+  {{ hubTile('/call-center/dialer', 'Dialer', 'Lookup → book → clinical workflow', 'Start') }}
+  {{ hubTile('/call-center/follow-ups', 'Follow-Up Search', 'Search and manage customer follow-ups') }}
+  {{ hubTile('/call-center/follow-ups/next-sitting', 'Next Sitting', 'Weekly / monthly session rebooking queue') }}
+  {{ hubTile('/call-center/callbacks', 'Call Back Schedule', 'Upcoming callback appointments') }}
+  {{ hubTile('/call-center/not-joined', 'Not Joined', 'Prospects who have not joined treatment') }}
+  {{ hubTile('/call-center/treatment-booked', 'Treatment Booked', 'Scheduled treatment appointments') }}
+  {{ hubTile('/appointments/create', 'Book Appointment', 'Schedule consultation or treatment') }}
+  {{ hubTile('/customer/search', 'Customer Search', 'Look up customer by UHID or phone') }}
+  {{ hubTile('/customer/schedule-pending', 'Schedule Pending', 'Lead workflow before first appointment') }}
+</div>
+{% endblock %}

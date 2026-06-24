@@ -1,0 +1,42 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/purchase/factory/indents" class="erp-modal-form" hx-post="/purchase/factory/indents" hx-swap="none">
+  <div class="erp-form-grid">
+    <div class="erp-field">
+      <label class="erp-label">Branch *</label>
+      <select name="branchId" class="erp-select" required>
+        {% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="erp-field sm:col-span-2">
+      <label class="erp-label">Notes</label>
+      <textarea name="notes" class="erp-input" rows="2"></textarea>
+    </div>
+  </div>
+  <div class="erp-card mt-4 p-4">
+    <div class="flex flex-wrap gap-2 mb-3">
+      <select id="fin-product" class="erp-select text-sm flex-1">
+        {% for p in products %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+      </select>
+      <input type="number" id="fin-qty" class="erp-input w-24 text-sm" value="1" min="1">
+      <button type="button" onclick="addFinLine()" class="erp-btn-secondary text-sm">Add</button>
+    </div>
+    <table class="erp-table text-sm"><thead><tr><th>Product</th><th>Qty</th><th></th></tr></thead>
+    <tbody id="fin-lines"><tr><td colspan="3" class="erp-empty-cell">Add products</td></tr></tbody></table>
+    <input type="hidden" name="items" id="fin-items-json" value="[]">
+  </div>
+  {{ formFooter() }}
+</form>
+<script>
+const finItems = [];
+function refreshFinLines() {
+  document.getElementById('fin-items-json').value = JSON.stringify(finItems);
+  document.getElementById('fin-lines').innerHTML = finItems.length
+    ? finItems.map((i, idx) => `<tr><td>${i.productName}</td><td>${i.quantity}</td><td><button type="button" class="text-red-500 text-xs" onclick="finItems.splice(${idx},1);refreshFinLines()">Remove</button></td></tr>`).join('')
+    : '<tr><td colspan="3" class="erp-empty-cell">Add products</td></tr>';
+}
+function addFinLine() {
+  const sel = document.getElementById('fin-product');
+  finItems.push({ productId: sel.value, quantity: parseInt(document.getElementById('fin-qty').value, 10) || 1, productName: sel.options[sel.selectedIndex].text });
+  refreshFinLines();
+}
+</script>

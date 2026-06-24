@@ -1,0 +1,64 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/purchase/aesthetics/orders" class="erp-modal-form" hx-post="/purchase/aesthetics/orders" hx-swap="none">
+  <div class="erp-form-grid">
+    <div class="erp-field">
+      <label class="erp-label">Center Branch *</label>
+      <select name="branchId" class="erp-select" required>
+        {% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Vendor *</label>
+      <select name="vendorId" class="erp-select" required>
+        {% for v in vendors %}<option value="{{ v.id }}">{{ v.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Expected Date</label>
+      <input type="date" name="expectedDate" class="erp-input">
+    </div>
+    <div class="erp-field sm:col-span-2">
+      <label class="erp-label">Notes</label>
+      <textarea name="notes" class="erp-input" rows="2"></textarea>
+    </div>
+  </div>
+  <div class="erp-card mt-4 p-4">
+    <div class="flex flex-wrap gap-2 mb-3">
+      <select id="apo-product" class="erp-select text-sm flex-1">
+        {% for p in products %}<option value="{{ p.id }}" data-price="{{ p.costPrice }}">{{ p.name }}</option>{% endfor %}
+      </select>
+      <input type="number" id="apo-qty" class="erp-input w-20 text-sm" value="1" min="1">
+      <input type="number" id="apo-price" class="erp-input w-28 text-sm" step="0.01" placeholder="Rate">
+      <button type="button" onclick="addApoLine()" class="erp-btn-secondary text-sm">Add</button>
+    </div>
+    <table class="erp-table text-sm"><thead><tr><th>Product</th><th>Qty</th><th>Rate</th><th></th></tr></thead>
+    <tbody id="apo-lines"><tr><td colspan="4" class="erp-empty-cell">Add line items</td></tr></tbody></table>
+    <input type="hidden" name="items" id="apo-items-json" value="[]">
+  </div>
+  {{ formFooter() }}
+</form>
+<script>
+const apoItems = [];
+document.getElementById('apo-product')?.addEventListener('change', function() {
+  const p = this.options[this.selectedIndex].dataset.price;
+  document.getElementById('apo-price').value = p || '';
+});
+function addApoLine() {
+  const sel = document.getElementById('apo-product');
+  const productId = sel.value;
+  const name = sel.options[sel.selectedIndex].text;
+  const quantity = parseInt(document.getElementById('apo-qty').value, 10) || 1;
+  const unitPrice = parseFloat(document.getElementById('apo-price').value) || 0;
+  apoItems.push({ productId, quantity, unitPrice, productName: name });
+  document.getElementById('apo-items-json').value = JSON.stringify(apoItems);
+  document.getElementById('apo-lines').innerHTML = apoItems.map((i, idx) =>
+    `<tr><td>${i.productName}</td><td>${i.quantity}</td><td>₹${i.unitPrice}</td><td><button type="button" class="text-red-500 text-xs" onclick="apoItems.splice(${idx},1);addApoLine.refresh()">Remove</button></td></tr>`
+  ).join('') || '<tr><td colspan="4" class="erp-empty-cell">Add line items</td></tr>';
+}
+addApoLine.refresh = function() {
+  document.getElementById('apo-items-json').value = JSON.stringify(apoItems);
+  document.getElementById('apo-lines').innerHTML = apoItems.length ? apoItems.map((i, idx) =>
+    `<tr><td>${i.productName}</td><td>${i.quantity}</td><td>₹${i.unitPrice}</td><td><button type="button" class="text-red-500 text-xs" onclick="apoItems.splice(${idx},1);addApoLine.refresh()">Remove</button></td></tr>`
+  ).join('') : '<tr><td colspan="4" class="erp-empty-cell">Add line items</td></tr>';
+};
+</script>

@@ -1,0 +1,35 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Factory Indent Search') %}
+{% endcall %}
+<form method="GET" class="erp-filter-bar mb-4">
+  <div class="erp-field flex-1"><input type="text" name="q" value="{{ filters.q or '' }}" class="erp-input" placeholder="Indent no, branch…"></div>
+  <div class="erp-field"><select name="status" class="erp-select"><option value="">All statuses</option>
+    {% for s in ['PENDING','APPROVED','PARTIAL','FULFILLED','REJECTED'] %}<option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+  </select></div>
+  <button type="submit" class="erp-btn-secondary">Search</button>
+</form>
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+    <thead><tr><th>Indent No</th><th>Branch</th><th>Items</th><th>Status</th><th>Approved</th><th>Date</th></tr></thead>
+    <tbody>
+      {% for ind in indents %}
+      <tr>
+        <td class="font-mono text-xs">{{ ind.indentNo }}</td>
+        <td>{{ ind.branch.name }}</td>
+        <td>{{ ind.items | length }}</td>
+        <td>{{ statusBadge(ind.status) }}</td>
+        <td class="text-xs">{% if ind.approvedAt %}{{ ind.approvedAt | date }}{% else %}—{% endif %}</td>
+        <td class="text-xs">{{ ind.createdAt | date }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="erp-empty-cell">No indents found</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

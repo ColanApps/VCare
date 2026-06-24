@@ -1,0 +1,53 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Schedule Pending', 'Customers with pending consultations awaiting scheduling') %}
+{% endcall %}
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for c in customers %}
+  {% set completed = c.scheduleSteps | selectattr('status', 'equalto', 'COMPLETED') | list | length %}
+  {% set percent = ((completed / 6) * 100) | round %}
+  <a href="/customer/schedule-pending/{{ c.id }}" class="erp-card hover:border-accent-300 transition-colors block">
+    <div class="erp-card-body">
+      <div class="flex items-start gap-3">
+        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-accent-400 to-erp-600 flex items-center justify-center text-white font-semibold shrink-0">
+          {{ c.firstName[0] }}{{ c.lastName[0] }}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="font-semibold text-slate-900">{{ c.firstName }} {{ c.lastName }}</div>
+          <div class="text-xs font-mono text-slate-500">{{ c.uhid }}</div>
+          <div class="text-xs text-slate-500 mt-1">{{ c.phone }} · {{ c.branch.name }}</div>
+        </div>
+        <span class="erp-badge-warning">{{ percent }}%</span>
+      </div>
+      <div class="mt-3">
+        <div class="flex justify-between text-[10px] text-slate-500 mb-1">
+          <span>Workflow progress</span>
+          <span>{{ completed }}/6 steps</span>
+        </div>
+        <div class="erp-stat-bar h-2">
+          <div class="erp-stat-bar-fill" style="width: {{ percent }}%"></div>
+        </div>
+      </div>
+      {% if c.consultations | length > 0 %}
+      <div class="mt-3 pt-3 border-t border-surface-border text-xs text-slate-600">
+        <span class="text-slate-500">Complaint:</span> {{ c.consultations[0].chiefComplaint or 'Not specified' }}
+      </div>
+      {% endif %}
+      {% if c.photos | length > 0 %}
+      <div class="flex gap-2 mt-3">
+        {% for photo in c.photos %}
+        <div class="w-10 h-10 rounded bg-slate-100 flex items-center justify-center text-[10px] text-slate-400">{{ photo.type }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <div class="mt-4 text-xs text-accent-600 font-medium">Continue workflow →</div>
+    </div>
+  </a>
+  {% else %}
+  <div class="col-span-full erp-card"><div class="erp-card-body text-center text-slate-400 py-12">No pending schedules</div></div>
+  {% endfor %}
+</div>
+{% endblock %}

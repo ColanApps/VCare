@@ -1,0 +1,33 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+{% block content %}
+{% call pageToolbar('Product Master', 'Manage billable and consumable products') %}
+  {{ modalTrigger('Add Product', '/inventory/products/form', 'New Product', 'lg') }}
+{% endcall %}
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr><th>SKU</th><th>Name</th><th>Type</th><th>HSN</th><th>MRP</th><th>Cost</th><th>Vendor</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for p in products %}
+        <tr>
+          <td class="font-mono text-xs">{{ p.sku }}</td>
+          <td class="font-medium">{{ p.name }}</td>
+          <td><span class="erp-badge-neutral">{{ p.type }}</span></td>
+          <td class="font-mono text-xs">{{ p.hsnCode or '—' }}</td>
+          <td>{{ p.mrp | currency }}</td>
+          <td>{{ p.costPrice | currency }}</td>
+          <td>{% if p.vendor %}{{ p.vendor.name }}{% else %}—{% endif %}</td>
+          <td>{% if p.isActive %}<span class="erp-badge-success">Active</span>{% else %}<span class="erp-badge-danger">Inactive</span>{% endif %}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="erp-empty-cell">No products defined</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

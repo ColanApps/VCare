@@ -1,0 +1,40 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Consultant Performance') %}
+{% endcall %}
+<p class="text-sm text-slate-500 mb-6">Current month performance metrics</p>
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Consultant</th>
+          <th>Branch</th>
+          <th>Revenue</th>
+          <th>Bills</th>
+          <th>Appointments</th>
+          <th>Avg Bill Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in performance %}
+        <tr class="hover:bg-accent-50/30 cursor-pointer" onclick="window.location='/reports/consultants/{{ p.id }}'">
+          <td class="text-slate-400">{{ loop.index }}</td>
+          <td class="font-medium text-accent-700">{{ p.firstName }} {{ p.lastName }}</td>
+          <td>{% if p.branch %}{{ p.branch.name }}{% else %}—{% endif %}</td>
+          <td class="font-semibold text-emerald-600">{{ p.revenue | currency }}</td>
+          <td>{{ p.billCount | number }}</td>
+          <td>{{ p.appointments | number }}</td>
+          <td>{% if p.billCount > 0 %}{{ (p.revenue / p.billCount) | currency }}{% else %}—{% endif %}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="erp-empty-cell">No consultant data available</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

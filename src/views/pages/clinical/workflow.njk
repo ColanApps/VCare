@@ -1,0 +1,304 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% from "macros/components.njk" import statusBadge %}
+{% block content %}
+{% set consult = workflow.latestConsultation %}
+{% set readiness = workflow.procedureReadiness %}
+{% set hasActiveProcedure = workflow.activeProcedure and workflow.activeProcedure.status != 'CANCELLED' and not workflow.activeProcedure.billId %}
+
+{% call pageToolbar('Clinical Workflow', workflow.customer.uhid ~ ' · ' ~ workflow.customer.firstName ~ ' ' ~ workflow.customer.lastName) %}
+  <a href="/customer/{{ workflow.customer.id }}" class="erp-btn-secondary text-sm">Profile</a>
+  <a href="/dashboard/customer-journey/{{ workflow.customer.id }}" class="erp-btn-secondary text-sm">Journey</a>
+  {% if workflow.nextStep %}<a href="{{ workflow.nextStep.url }}" class="erp-btn-primary text-sm">Next: {{ workflow.nextStep.label }}</a>{% endif %}
+{% endcall %}
+
+<div class="erp-triple-grid mb-6">
+  <div class="lg:col-span-2 erp-card">
+    <div class="erp-card-header flex justify-between items-center">
+      <h3 class="font-semibold text-slate-900">Care Path</h3>
+      <span class="text-sm font-semibold text-accent-600">{{ workflow.progress }}%</span>
+    </div>
+    <div class="erp-card-body">
+      <div class="erp-stat-bar h-2.5 mb-6">
+        <div class="erp-stat-bar-fill" style="width: {% if workflow.progress > 100 %}100{% else %}{{ workflow.progress }}{% endif %}%"></div>
+      </div>
+      <ol class="space-y-2">
+        {% for step in workflow.steps %}
+        <li id="{{ step.key | lower }}" class="flex items-center justify-between gap-4 rounded-xl px-4 py-3 border {% if step.done %}border-emerald-100 bg-emerald-50/50{% elif workflow.nextStep and step.key == workflow.nextStep.key %}border-amber-200 bg-amber-50{% else %}border-surface-border{% endif %}">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold {% if step.done %}bg-emerald-500 text-white{% elif workflow.nextStep and step.key == workflow.nextStep.key %}bg-amber-400 text-white{% else %}bg-slate-200 text-slate-600{% endif %}">
+              {% if step.done %}✓{% else %}{{ loop.index }}{% endif %}
+            </span>
+            <span class="font-medium">{{ step.label }}</span>
+          </div>
+          {% if not step.done or (workflow.nextStep and step.key == workflow.nextStep.key) %}
+          <a href="{{ step.url }}" class="erp-btn-secondary text-xs">Go</a>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+
+  <div class="erp-card h-fit self-start">
+    <div class="erp-card-header flex justify-between items-center">
+      <h3 class="font-semibold text-slate-900">Schedule Workflow</h3>
+      <a href="{{ workflow.scheduleWorkflow.url }}" class="text-xs text-accent-600 hover:underline font-medium">Open →</a>
+    </div>
+    <div class="erp-card-body">
+      <div class="erp-stat-bar h-2 mb-4">
+        <div class="erp-stat-bar-fill" style="width: {{ workflow.scheduleWorkflow.progress.percent }}%"></div>
+      </div>
+      <p class="text-xs text-slate-500 mb-3">{{ workflow.scheduleWorkflow.progress.completed }} / {{ workflow.scheduleWorkflow.progress.total }} steps complete</p>
+      <div class="grid grid-cols-2 gap-2">
+        {% for sw in workflow.scheduleWorkflow.steps %}
+        <div class="rounded-lg border px-2 py-2 text-center {% if sw.done %}border-emerald-200 bg-emerald-50/60{% else %}border-surface-border{% endif %}">
+          <div class="text-[10px] font-semibold uppercase tracking-wide text-slate-500 truncate" title="{{ sw.label }}">{{ sw.label }}</div>
+          {% if sw.done %}
+          <span class="erp-badge-success text-[10px] mt-1 inline-block">Done</span>
+          {% else %}
+          <span class="erp-badge-warning text-[10px] mt-1 inline-block">Pending</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <a href="{{ workflow.scheduleWorkflow.url }}" class="erp-btn-secondary w-full text-sm mt-4 text-center block">Schedule Pending Workflow</a>
+    </div>
+  </div>
+</div>
+
+<div class="erp-triple-grid mb-8">
+  <div class="lg:col-span-2 space-y-6">
+    <div id="consultation" class="erp-card" x-data="{ showConsult: {{ 'true' if (workflow.nextStep and workflow.nextStep.key == 'CONSULTATION') else 'false' }} }">
+      <div class="erp-card-header flex justify-between items-center cursor-pointer" @click="showConsult = !showConsult">
+        <h3 class="font-semibold">Consultation</h3>
+        {% if consult %}<span class="text-xs text-slate-500">{{ consult.consultedAt | datetime }}</span>{% endif %}
+      </div>
+      <div x-show="showConsult" x-cloak class="erp-card-body space-y-4">
+        <form method="POST" action="/clinical/workflow/{{ workflow.customer.id }}/consult" class="space-y-4">
+          <div>
+            <label class="erp-label">Consultant</label>
+            <select name="consultantId" class="erp-select" required>
+              {% for c in workflow.consultants %}
+              <option value="{{ c.id }}" {% if consult and consult.consultantId == c.id %}selected{% elif loop.first %}selected{% endif %}>{{ c.firstName }} {{ c.lastName }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="erp-label">Chief Complaint</label>
+            <textarea name="chiefComplaint" class="erp-input" rows="2" placeholder="Patient's primary concern…">{{ consult.chiefComplaint or '' }}</textarea>
+          </div>
+          <div>
+            <label class="erp-label">Diagnosis</label>
+            <textarea name="diagnosis" class="erp-input" rows="2" placeholder="Clinical diagnosis…">{{ consult.diagnosis or '' }}</textarea>
+          </div>
+          <div>
+            <label class="erp-label">Clinical Notes</label>
+            <textarea name="notes" class="erp-input" rows="2" placeholder="Examination findings…">{{ consult.notes or '' }}</textarea>
+          </div>
+          <div>
+            <label class="erp-label">Recommendations</label>
+            <textarea name="recommendations" class="erp-input" rows="2" placeholder="Treatment plan…">{{ consult.recommendations or '' }}</textarea>
+          </div>
+          <button type="submit" class="erp-btn-primary">Save Consultation</button>
+        </form>
+      </div>
+      {% if consult and consult.chiefComplaint %}
+      <div x-show="!showConsult" x-cloak class="erp-card-body text-sm text-slate-600 border-t border-surface-border">
+        <p><span class="font-medium text-slate-800">Chief complaint:</span> {{ consult.chiefComplaint }}</p>
+        {% if consult.diagnosis %}<p class="mt-2"><span class="font-medium text-slate-800">Diagnosis:</span> {{ consult.diagnosis }}</p>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    {% if workflow.latestTreatmentSlip %}
+    {% set tp = workflow.treatmentPlan %}
+    <div class="erp-card border-accent-100">
+      <div class="erp-card-header flex justify-between items-center">
+        <h3 class="font-semibold">Treatment Slip</h3>
+        <div class="flex items-center gap-2">
+          {% if tp and tp.totalSessions > 1 %}
+          <span class="erp-badge-neutral">Session {{ tp.currentSessionNo }} of {{ tp.totalSessions }}</span>
+          {% endif %}
+          <span class="font-mono text-xs text-slate-500">{{ workflow.latestTreatmentSlip.slipNo }}</span>
+        </div>
+      </div>
+      <div class="erp-card-body">
+        {% if tp and tp.totalSessions > 0 %}
+        <div class="mb-4">
+          <div class="flex justify-between items-center text-sm mb-2">
+            <span class="text-slate-600">{{ tp.completedSessions }} of {{ tp.totalSessions }} sessions complete</span>
+            <span class="font-semibold text-accent-600">{{ tp.percent }}%</span>
+          </div>
+          <div class="erp-stat-bar h-2.5">
+            <div class="erp-stat-bar-fill" style="width: {% if tp.percent > 100 %}100{% else %}{{ tp.percent }}{% endif %}%"></div>
+          </div>
+        </div>
+        {% if tp.sessionRows and tp.sessionRows.length %}
+        <ul class="space-y-1.5 mb-4">
+          {% for row in tp.sessionRows %}
+          <li class="flex items-center justify-between rounded-lg px-3 py-2 text-sm {% if row.status == 'DONE' %}bg-emerald-50 border border-emerald-100{% elif row.status == 'BOOKED' %}bg-amber-50 border border-amber-100{% else %}bg-slate-50 border border-surface-border{% endif %}">
+            <span class="font-medium">Session {{ row.sessionNo }}</span>
+            <div class="flex items-center gap-2">
+              {% if row.procedureNo %}
+              <a href="/appointments/procedures/{{ row.procedureId }}" class="font-mono text-xs text-accent-600 hover:underline">{{ row.procedureNo }}</a>
+              {% endif %}
+              {% if row.status == 'DONE' %}
+              <span class="erp-badge-success text-[10px]">Done</span>
+              {% elif row.status == 'BOOKED' %}
+              <span class="erp-badge-warning text-[10px]">Booked</span>
+              {% else %}
+              <span class="erp-badge-neutral text-[10px]">Pending</span>
+              {% endif %}
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        {% if tp.nextSessionNo %}
+        <p class="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 mb-3">Next: book session {{ tp.nextSessionNo }}{% if tp.remaining > 1 %} ({{ tp.remaining }} remaining){% endif %}</p>
+        {% elif tp.remaining == 0 and tp.totalSessions > 0 %}
+        <p class="text-xs text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2 mb-3">All {{ tp.totalSessions }} sessions completed.</p>
+        {% endif %}
+        {% else %}
+        <div class="flex flex-wrap gap-4 text-sm mb-3">
+          <span><span class="text-slate-500">Sessions:</span> <strong>{{ workflow.latestTreatmentSlip.sessions }}</strong></span>
+          <span><span class="text-slate-500">Status:</span> {{ statusBadge(workflow.latestTreatmentSlip.status) }}</span>
+        </div>
+        {% endif %}
+        {% if workflow.latestTreatmentSlip.parsedTreatments and workflow.latestTreatmentSlip.parsedTreatments.length %}
+        <ul class="space-y-1">
+          {% for t in workflow.latestTreatmentSlip.parsedTreatments %}
+          <li class="flex justify-between text-sm rounded-lg px-3 py-2 bg-slate-50">
+            <span>{{ t.name }}</span>
+            {% if t.price %}<span class="text-slate-500">{{ t.price | currency }}</span>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        {% if workflow.latestTreatmentSlip.notes %}<p class="text-xs text-slate-500 mt-3">{{ workflow.latestTreatmentSlip.notes }}</p>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div id="procedure" class="erp-card" x-data="{ showBook: {{ 'true' if not hasActiveProcedure else 'false' }} }">
+      <div class="erp-card-header flex justify-between items-center">
+        <h3 class="font-semibold">Procedure</h3>
+        {% if hasActiveProcedure %}{{ statusBadge(workflow.activeProcedure.status) }}{% endif %}
+      </div>
+      <div class="erp-card-body space-y-4">
+        {% if hasActiveProcedure %}
+        <div class="flex flex-wrap gap-x-6 gap-y-2 text-sm items-center">
+          <span class="font-mono text-xs text-slate-500">{{ workflow.activeProcedure.procedureNo }}</span>
+          {% if workflow.activeProcedure.sessionNo and workflow.treatmentPlan %}
+          <span class="erp-badge-neutral text-[10px]">Session {{ workflow.activeProcedure.sessionNo }} of {{ workflow.treatmentPlan.totalSessions }}</span>
+          {% elif workflow.activeProcedure.sessionNo %}
+          <span class="erp-badge-neutral text-[10px]">Session {{ workflow.activeProcedure.sessionNo }}</span>
+          {% endif %}
+          {% if workflow.activeProcedure.treatment %}<span>{{ workflow.activeProcedure.treatment.name }}</span>{% endif %}
+          <span class="text-slate-500">{{ workflow.activeProcedure.scheduledAt | datetime }}</span>
+        </div>
+
+        {% if readiness %}
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Readiness Checklist</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium {% if readiness.consent %}bg-emerald-100 text-emerald-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+              {% if readiness.consent %}✓{% else %}○{% endif %} Consent
+            </span>
+            <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium {% if readiness.prePhoto and readiness.postPhoto %}bg-emerald-100 text-emerald-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+              {% if readiness.prePhoto and readiness.postPhoto %}✓{% else %}○{% endif %} Photos
+            </span>
+            <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium {% if readiness.consumptionApplied %}bg-emerald-100 text-emerald-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+              {% if readiness.consumptionApplied %}✓{% else %}○{% endif %} Consumption
+            </span>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="flex flex-wrap gap-2 pt-2">
+          {% if workflow.activeProcedure.status == 'BOOKED' %}
+          <form method="POST" action="/clinical/procedure/{{ workflow.activeProcedure.id }}/start">
+            <button type="submit" class="erp-btn-primary text-sm">Start Procedure</button>
+          </form>
+          {% endif %}
+          {% if workflow.consumptionPlan.length and not readiness.consumptionApplied %}
+          <form method="POST" action="/clinical/procedure/{{ workflow.activeProcedure.id }}/apply-consumption">
+            <button type="submit" class="erp-btn-secondary text-sm">Apply Consumption</button>
+          </form>
+          {% endif %}
+          {% if workflow.activeProcedure.status != 'COMPLETED' and not workflow.activeProcedure.billId %}
+          <form method="POST" action="/clinical/procedure/{{ workflow.activeProcedure.id }}/complete-bill">
+            <button type="submit" class="erp-btn-primary text-sm" {% if readiness and not readiness.canComplete %}title="{{ readiness.blockers | join('; ') }}"{% endif %}>Complete & Bill</button>
+          </form>
+          {% endif %}
+          <a href="/appointments/procedures/{{ workflow.activeProcedure.id }}" class="erp-btn-secondary text-sm">Procedure Detail</a>
+        </div>
+        {% else %}
+        <p class="text-sm text-slate-500">No active procedure. Book one to continue the care path.</p>
+        <button type="button" @click="showBook = !showBook" class="erp-btn-secondary text-sm" x-text="showBook ? 'Hide booking form' : 'Book procedure'"></button>
+        <form x-show="showBook" x-cloak method="POST" action="/clinical/workflow/{{ workflow.customer.id }}/book-procedure" class="space-y-4 pt-2 border-t border-surface-border">
+          <div class="erp-form-grid">
+            <div class="col-span-full">
+              <label class="erp-label">Treatment *</label>
+              <select name="treatmentId" class="erp-select" required>
+                <option value="">Select treatment</option>
+                {% for t in workflow.treatments %}
+                <option value="{{ t.id }}">{{ t.name }} — {{ t.basePrice | currency }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="erp-label">Performer</label>
+              <select name="performerId" class="erp-select">
+                <option value="">Current user</option>
+                {% for c in workflow.consultants %}
+                <option value="{{ c.id }}">{{ c.firstName }} {{ c.lastName }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="erp-label">Scheduled At *</label>
+              <input type="datetime-local" name="scheduledAt" class="erp-input" required>
+            </div>
+          </div>
+          <button type="submit" class="erp-btn-primary">Book Procedure</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6 h-fit self-start">
+    {% if workflow.latestBill and workflow.latestBill.balanceAmount > 0 %}
+    <div class="erp-card border-amber-200">
+      <div class="erp-card-header"><h3 class="font-semibold">Outstanding Balance</h3></div>
+      <div class="erp-card-body">
+        <p class="text-sm text-slate-600">Bill <strong>{{ workflow.latestBill.billNo }}</strong></p>
+        <p class="text-2xl font-semibold text-amber-600 mt-1">{{ workflow.latestBill.balanceAmount | currency }}</p>
+        <a href="/billing/{{ workflow.latestBill.id }}" class="erp-btn-primary w-full text-sm mt-4 text-center block">Collect Payment</a>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if workflow.latestAppt %}
+    <div class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Latest Appointment</h3></div>
+      <div class="erp-card-body text-sm space-y-1">
+        <p class="font-mono text-xs text-slate-500">{{ workflow.latestAppt.appointmentNo }}</p>
+        <p>{{ workflow.latestAppt.scheduledAt | datetime }}</p>
+        {{ statusBadge(workflow.latestAppt.status) }}
+        <a href="/appointments/{{ workflow.latestAppt.id }}" class="erp-btn-secondary w-full text-sm mt-3 text-center block">View Appointment</a>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="erp-card">
+      <div class="erp-card-body text-sm space-y-2">
+        <a href="{{ workflow.scheduleWorkflow.url }}" class="erp-btn-secondary w-full text-sm text-center block">Schedule Pending</a>
+        <a href="/appointments/create?customerId={{ workflow.customer.id }}" class="erp-btn-secondary w-full text-sm text-center block">Book Appointment</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

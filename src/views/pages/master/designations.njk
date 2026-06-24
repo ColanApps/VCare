@@ -1,0 +1,51 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Designations & Grades') %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold text-slate-900">Grade Levels</h3></div>
+    <div class="erp-card-body space-y-2">
+      {% for g in grades %}
+      <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+        <div>
+          <div class="font-medium text-sm">{{ g.name }}</div>
+          <div class="text-xs text-slate-500">{{ g.code }}</div>
+        </div>
+        <span class="erp-badge-neutral">L{{ g.level }}</span>
+      </div>
+      {% else %}
+      <p class="text-slate-400 text-sm text-center py-4">No grades defined</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="lg:col-span-2 erp-card">
+    <div class="erp-card-header">
+      <h3 class="font-semibold text-slate-900">Designations</h3>
+      <span class="text-xs text-slate-500">{{ designations | length }} roles</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="erp-table">
+        <thead>
+          <tr><th>Code</th><th>Name</th><th>Grade</th><th>Level</th></tr>
+        </thead>
+        <tbody>
+          {% for d in designations %}
+          <tr>
+            <td class="font-mono text-xs">{{ d.code }}</td>
+            <td class="font-medium">{{ d.name }}</td>
+            <td>{% if d.grade %}{{ d.grade.name }}{% else %}—{% endif %}</td>
+            <td>{% if d.grade %}<span class="erp-badge-neutral">L{{ d.grade.level }}</span>{% else %}—{% endif %}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="erp-empty-cell">No designations configured</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+  </div>
+  </div>
+</div>
+{% endblock %}

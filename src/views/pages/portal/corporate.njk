@@ -1,0 +1,60 @@
+{% extends "layouts/portal.njk" %}
+{% from "macros/ui.njk" import pageToolbar, hubTile %}
+{% block content %}
+{% call pageToolbar('Corporate Overview', period.start | date ~ ' – ' ~ period.end | date) %}
+{% endcall %}
+
+<div class="erp-kpi-grid">
+  <div class="erp-kpi"><div class="erp-kpi-label">Network Revenue</div><div class="erp-kpi-value mt-1">{{ totalRevenue | currency }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Network Target</div><div class="erp-kpi-value mt-1">{{ totalTarget | currency }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Achievement</div><div class="erp-kpi-value mt-1">{{ achievement | round(1) }}%</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Open Tickets</div><div class="erp-kpi-value mt-1">{{ openTickets }}</div></div>
+</div>
+
+<div class="erp-card erp-table-card mb-8">
+  <div class="erp-card-header"><h3 class="font-semibold">Branch Performance</h3></div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead><tr><th>Branch</th><th>Type</th><th>Revenue</th><th>Bills</th><th>Target</th><th>Achievement</th></tr></thead>
+      <tbody>
+        {% for row in branchStats %}
+        <tr>
+          <td class="font-medium">{{ row.branch.name }}</td>
+          <td><span class="erp-badge-neutral">{{ row.branch.type }}</span></td>
+          <td class="font-medium">{{ row.revenue | currency }}</td>
+          <td>{{ row.bills }}</td>
+          <td>{{ row.target | currency }}</td>
+          <td>
+            <div class="flex items-center gap-2">
+              <div class="erp-stat-bar flex-1 w-20"><div class="erp-stat-bar-fill" style="width: {% if row.target > 0 %}{% if (row.revenue / row.target * 100) > 100 %}100{% else %}{{ ((row.revenue / row.target) * 100) | round(0) }}{% endif %}{% else %}0{% endif %}%"></div></div>
+              <span class="text-xs">{% if row.target > 0 %}{{ ((row.revenue / row.target) * 100) | round(0) }}{% else %}0{% endif %}%</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<h2 class="erp-section-title">Workflows</h2>
+<div class="erp-hub-grid mb-8">
+  {{ hubTile('/reports/branch-comparison', 'Branch Comparison', 'Detailed multi-branch analytics and trends') }}
+  {% set iouBadge = (pendingIou ~ ' pending') if pendingIou else '' %}
+  {{ hubTile('/operations/iou', 'IOU Requests', 'Pending IOU approvals across the network', iouBadge) }}
+  {{ hubTile('/finance', 'Finance Hub', 'Collections, day close, AR aging & GST workflows') }}
+  {{ hubTile('/reports/consultants', 'Consultant Reports', 'Revenue and target achievement by consultant') }}
+</div>
+
+<div class="erp-card mt-6">
+  <div class="erp-card-header"><h3 class="font-semibold">Raise Support Ticket</h3></div>
+  <form method="POST" action="/portal/corporate/tickets" class="erp-card-body space-y-3">
+    <div><label class="erp-label">Subject</label><input type="text" name="subject" class="erp-input" required></div>
+    <div><label class="erp-label">Description</label><textarea name="description" class="erp-input" rows="3" required></textarea></div>
+    <div><label class="erp-label">Priority</label>
+      <select name="priority" class="erp-select"><option value="LOW">Low</option><option value="MEDIUM" selected>Medium</option><option value="HIGH">High</option></select>
+    </div>
+    <button type="submit" class="erp-btn-primary">Submit Ticket</button>
+  </form>
+</div>
+{% endblock %}

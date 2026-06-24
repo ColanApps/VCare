@@ -1,0 +1,10 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/registry/forms/clinical/{{ treatment.id }}" class="erp-modal-form" hx-post="/registry/forms/clinical/{{ treatment.id }}" hx-swap="none">
+  <div class="erp-form-grid">
+    <div class="erp-field"><label class="erp-label">Code</label><input class="erp-input" value="{{ treatment.code }}" readonly></div>
+    <div class="erp-field"><label class="erp-label">Name</label><input name="name" class="erp-input" value="{{ treatment.name }}" required></div>
+    <div class="erp-field"><label class="erp-label">Category</label><input name="category" class="erp-input" value="{{ treatment.category }}"></div>
+    <div class="erp-field"><label class="erp-label">Base Price</label><input name="basePrice" type="number" step="0.01" class="erp-input" value="{{ treatment.basePrice }}"></div>
+  </div>
+  {{ formFooter('Update Service') }}
+</form>

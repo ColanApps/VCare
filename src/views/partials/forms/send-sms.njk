@@ -1,0 +1,8 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/registry/forms/sms" class="erp-modal-form" hx-post="/registry/forms/sms" hx-swap="none">
+  <div class="erp-form-grid">
+    <div class="erp-field"><label class="erp-label">Phone *</label><input name="phone" class="erp-input" value="{{ phone }}" required></div>
+    <div class="erp-field sm:col-span-2"><label class="erp-label">Message *</label><textarea name="message" class="erp-input" rows="4" required placeholder="SMS message to customer…"></textarea></div>
+  </div>
+  {{ formFooter('Send SMS') }}
+</form>

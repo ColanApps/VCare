@@ -1,0 +1,135 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Executive Dashboard', 'Revenue, appointments & branch performance') %}
+  <a href="/dashboard/my-tasks" class="erp-btn-primary text-sm">My Tasks</a>
+  <a href="/finance" class="erp-btn-secondary text-sm">Finance Hub</a>
+{% endcall %}
+
+<div class="erp-kpi-grid">
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">Today's Revenue</div>
+    <div class="erp-kpi-value mt-1">{{ kpis.revenueToday | currency }}</div>
+    <div class="text-xs text-slate-400 mt-2">{{ kpis.appointmentsToday }} appointments today</div>
+  </div>
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">Monthly Revenue</div>
+    <div class="erp-kpi-value mt-1">{{ kpis.revenueMonth | currency }}</div>
+    <div class="text-xs text-emerald-600 mt-2">{{ kpis.collectedMonth | currency }} collected</div>
+  </div>
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">Active Customers</div>
+    <div class="erp-kpi-value mt-1">{{ kpis.totalCustomers | number }}</div>
+    <div class="text-xs text-slate-400 mt-2">+{{ kpis.newCustomersMonth }} this month</div>
+  </div>
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">Pending Actions</div>
+    <div class="erp-kpi-value mt-1">{{ kpis.pendingIndents + kpis.openTickets + kpis.pendingIOU }}</div>
+    <div class="text-xs text-slate-400 mt-2">{{ kpis.pendingIndents }} indents · {{ kpis.openTickets }} tickets</div>
+  </div>
+</div>
+
+<div class="erp-triple-grid mb-6">
+  <div class="lg:col-span-2 erp-card">
+    <div class="erp-card-header">
+      <h3 class="font-semibold text-slate-900">Revenue Trend (7 Days)</h3>
+    </div>
+    <div class="erp-card-body">
+      <div class="erp-chart-wrap erp-chart-wrap-md">
+        <canvas id="salesChart"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="erp-card h-fit self-start">
+    <div class="erp-card-header">
+      <h3 class="font-semibold text-slate-900">Branch Targets</h3>
+      <span class="text-xs text-slate-500">This Month</span>
+    </div>
+    <div class="erp-card-body space-y-4">
+      {% for branch in branchPerformance %}
+      <div>
+        <div class="flex justify-between text-xs mb-1.5">
+          <span class="font-medium text-slate-700">{{ branch.name }}</span>
+          <span class="text-slate-500">{{ branch.progress | round(0) }}%</span>
+        </div>
+        <div class="erp-stat-bar">
+          <div class="erp-stat-bar-fill" style="width: {% if branch.progress > 100 %}100{% else %}{{ branch.progress }}{% endif %}%"></div>
+        </div>
+        <div class="flex justify-between text-[10px] text-slate-400 mt-1">
+          <span>{{ branch.achieved | currency }}</span>
+          <span>{{ branch.target | currency }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="erp-card erp-table-card">
+  <div class="erp-card-header">
+    <h3 class="font-semibold text-slate-900">Today's Appointments</h3>
+    <a href="/appointments/create" class="erp-btn-primary text-xs">+ Book Appointment</a>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Appointment No</th>
+          <th>Customer</th>
+          <th>Consultant</th>
+          <th>Branch</th>
+          <th>Type</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for apt in recentAppointments %}
+        <tr>
+          <td class="font-mono text-xs">{{ apt.scheduledAt | datetime }}</td>
+          <td><a href="/appointments/search?q={{ apt.appointmentNo }}" class="text-accent-600 hover:underline font-medium">{{ apt.appointmentNo }}</a></td>
+          <td>{{ apt.customer.firstName }} {{ apt.customer.lastName }}</td>
+          <td>{% if apt.consultant %}{{ apt.consultant.firstName }} {{ apt.consultant.lastName }}{% else %}—{% endif %}</td>
+          <td>{{ apt.branch.name }}</td>
+          <td><span class="erp-badge-neutral">{{ apt.type }}</span></td>
+          <td>{{ statusBadge(apt.status) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="erp-empty-cell">No appointments scheduled for today</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const trendData = {{ salesTrend | json | safe }};
+  erpCreateChart('salesChart', {
+    type: 'line',
+    data: {
+      labels: trendData.map(d => d.label),
+      datasets: [{
+        label: 'Revenue',
+        data: trendData.map(d => d.revenue),
+        borderColor: '#14b89a',
+        backgroundColor: 'rgba(20, 184, 154, 0.08)',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2,
+        pointRadius: 4,
+        pointBackgroundColor: '#14b89a',
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { callback: v => '₹' + (v/1000).toFixed(0) + 'K' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('GST Export', 'Period ' ~ month ~ '/' ~ year) %}
+  <a href="/finance/gst-export?month={{ month }}&year={{ year }}&format=csv" class="erp-btn-primary text-sm">Download CSV</a>
+  <a href="/finance" class="erp-btn-secondary text-sm">Finance Hub</a>
+{% endcall %}
+
+<form method="GET" class="erp-filter-bar">
+  <div class="erp-field w-28">
+    <label class="erp-label">Month</label>
+    <input type="number" name="month" min="1" max="12" value="{{ month }}" class="erp-input">
+  </div>
+  <div class="erp-field w-32">
+    <label class="erp-label">Year</label>
+    <input type="number" name="year" value="{{ year }}" class="erp-input">
+  </div>
+  <button type="submit" class="erp-btn-secondary">Load Period</button>
+</form>
+
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+  <div class="erp-kpi"><div class="erp-kpi-label">Invoices</div><div class="erp-kpi-value mt-1">{{ pack.summary.count }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Taxable Value</div><div class="erp-kpi-value mt-1">{{ pack.summary.taxable | currency }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Tax Amount</div><div class="erp-kpi-value mt-1">{{ pack.summary.tax | currency }}</div></div>
+</div>
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table text-sm">
+      <thead><tr><th>Bill</th><th>Date</th><th>Customer</th><th>GSTIN</th><th>Taxable</th><th>Tax</th><th>Total</th></tr></thead>
+      <tbody>
+        {% for b in pack.bills %}
+        <tr>
+          <td><a href="/billing/{{ b.id }}" class="text-accent-600 font-mono text-xs hover:underline">{{ b.billNo }}</a></td>
+          <td>{{ b.billDate | date }}</td>
+          <td>{{ b.customer.firstName }} {{ b.customer.lastName }}</td>
+          <td class="font-mono text-xs">{{ b.customer.gstin or b.buyerGstin or '—' }}</td>
+          <td>{{ b.subtotal | currency }}</td>
+          <td>{{ b.taxAmount | currency }}</td>
+          <td class="font-medium">{{ b.totalAmount | currency }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="erp-empty-cell">No invoices in this period.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

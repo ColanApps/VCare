@@ -1,0 +1,127 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Stock Transfer (STO)') %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">New Stock Transfer</h3></div>
+    <form method="POST" action="/inventory/stock-transfers" id="sto-form" class="erp-card-body space-y-4">
+      <div>
+        <label class="erp-label">From Branch *</label>
+        <select name="fromBranchId" class="erp-select" required>
+          {% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">To Branch *</label>
+        <select name="toBranchId" class="erp-select" required>
+          {% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Notes</label>
+        <textarea name="notes" class="erp-input" rows="2"></textarea>
+      </div>
+      <div class="border-t border-surface-border pt-4">
+        <div class="flex gap-2 mb-3">
+          <select id="product-select" class="erp-select flex-1 text-sm">
+            {% for p in products %}<option value="{{ p.id }}">{{ p.name }} ({{ p.sku }})</option>{% endfor %}
+          </select>
+          <input type="number" id="item-qty" class="erp-input w-20 text-sm" value="1" min="1">
+          <button type="button" onclick="addStoItem()" class="erp-btn-secondary text-sm">Add</button>
+        </div>
+      <div class="overflow-x-auto">
+        <table class="erp-table text-sm">
+          <thead><tr><th>Product</th><th>Qty</th><th></th></tr></thead>
+          <tbody id="sto-items-body">
+            <tr><td colspan="3" class="text-center text-slate-400 py-2 text-xs">Add products</td></tr>
+          </tbody>
+        </table>
+        <input type="hidden" name="items" id="sto-items-json" value="[]">
+      </div>
+      <button type="submit" class="erp-btn-primary w-full">Create STO</button>
+    </form>
+  </div>
+
+  <div class="lg:col-span-2 erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Transfer Orders</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+      <thead>
+        <tr><th>STO No</th><th>From</th><th>To</th><th>Items</th><th>Status</th><th>Date</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for t in transfers %}
+        <tr>
+          <td class="font-mono text-xs font-medium">{{ t.transferNo }}</td>
+          <td>{{ t.fromBranch.name }}</td>
+          <td>{{ t.toBranch.name }}</td>
+          <td>
+            <ul class="text-xs space-y-0.5">
+              {% for item in t.items %}
+              <li>{{ item.product.name }} × {{ item.quantity }}</li>
+              {% endfor %}
+            </ul>
+          </td>
+          <td>{{ statusBadge(t.status) }}</td>
+          <td class="text-xs text-slate-500">{{ t.createdAt | date }}</td>
+          <td class="space-x-1">
+            {% if t.status == 'PENDING' %}
+            <form method="POST" action="/inventory/stock-transfers/{{ t.id }}/approve" class="inline">
+              <button type="submit" class="erp-btn-secondary text-xs py-1">Approve</button>
+            </form>
+            {% endif %}
+            {% if t.status == 'APPROVED' or t.status == 'IN_TRANSIT' %}
+            <form method="POST" action="/inventory/stock-transfers/{{ t.id }}/complete" class="inline">
+              <button type="submit" class="erp-btn-primary text-xs py-1">Complete</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="erp-empty-cell">No stock transfers yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const stoItems = [];
+const productNames = { {% for p in products %}"{{ p.id }}": "{{ p.name }}",{% endfor %} };
+
+function addStoItem() {
+  const productId = document.getElementById('product-select').value;
+  const quantity = parseInt(document.getElementById('item-qty').value, 10) || 1;
+  stoItems.push({ productId, quantity });
+  renderStoItems();
+}
+
+function removeStoItem(index) {
+  stoItems.splice(index, 1);
+  renderStoItems();
+}
+
+function renderStoItems() {
+  const tbody = document.getElementById('sto-items-body');
+  const input = document.getElementById('sto-items-json');
+  if (stoItems.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-slate-400 py-2 text-xs">Add products</td></tr>';
+  } else {
+    tbody.innerHTML = stoItems.map((item, i) => `
+      <tr>
+        <td>${productNames[item.productId] || item.productId}</td>
+        <td>${item.quantity}</td>
+        <td><button type="button" onclick="removeStoItem(${i})" class="text-red-500 text-xs">Remove</button></td>
+      </tr>
+    `).join('');
+  }
+  input.value = JSON.stringify(stoItems);
+}
+</script>
+{% endblock %}

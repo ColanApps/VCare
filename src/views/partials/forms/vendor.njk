@@ -1,0 +1,22 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/purchase/vendors" class="erp-modal-form"
+  hx-post="/purchase/vendors" hx-swap="none">
+  <div class="erp-form-grid">
+    <div class="erp-field"><label class="erp-label">Code</label><input type="text" name="code" class="erp-input" required></div>
+    <div class="erp-field"><label class="erp-label">Name</label><input type="text" name="name" class="erp-input" required></div>
+    <div class="erp-field">
+      <label class="erp-label">Type</label>
+      <select name="type" class="erp-select"><option value="BILLABLE">Billable</option><option value="CONSUMABLE">Consumable</option></select>
+    </div>
+    <div class="erp-field"><label class="erp-label">Contact Person</label><input type="text" name="contact" class="erp-input"></div>
+    <div class="erp-field"><label class="erp-label">Email</label><input type="email" name="email" class="erp-input"></div>
+    <div class="erp-field"><label class="erp-label">Phone</label><input type="tel" name="phone" class="erp-input"></div>
+    <div class="erp-field"><label class="erp-label">GSTIN</label><input type="text" name="gstin" class="erp-input font-mono"></div>
+    <div class="erp-field"><label class="erp-label">Payment Terms</label><input type="text" name="paymentTerms" class="erp-input" placeholder="Net 30, COD, etc."></div>
+    <div class="erp-field"><label class="erp-label">Credit Days</label><input type="number" name="creditDays" class="erp-input" min="0"></div>
+    <div class="erp-field"><label class="erp-label">Bank Name</label><input type="text" name="bankName" class="erp-input"></div>
+    <div class="erp-field"><label class="erp-label">Bank Account</label><input type="text" name="bankAccount" class="erp-input font-mono"></div>
+    <div class="erp-field sm:col-span-2"><label class="erp-label">Address</label><textarea name="address" class="erp-input" rows="2"></textarea></div>
+  </div>
+  {{ formFooter() }}
+</form>

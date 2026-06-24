@@ -1,0 +1,128 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Kit Shortfall Alerts', 'Reorder breaches and upcoming procedure kit gaps') %}
+  <form method="GET" class="flex items-center gap-2">
+    <select name="branchId" class="erp-select text-sm" onchange="this.form.submit()">
+      {% for b in branches %}
+      <option value="{{ b.id }}" {% if b.id == branchId %}selected{% endif %}>{{ b.name }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  <a href="/inventory/indents/create" class="erp-btn-primary text-sm">Raise Indent</a>
+{% endcall %}
+
+{% if focusedProcedure %}
+<div class="erp-card mb-6 border-amber-200 bg-amber-50/50">
+  <div class="erp-card-header">
+    <h3 class="font-semibold text-amber-900">Focused Procedure — {{ focusedProcedure.procedure.procedureNo }}</h3>
+    <a href="/appointments/procedures/{{ focusedProcedure.procedure.id }}" class="text-xs text-accent-600 hover:underline">Open procedure</a>
+  </div>
+  <div class="erp-card-body">
+    <p class="text-sm text-slate-600 mb-3">
+      {{ focusedProcedure.procedure.customer.firstName }} {{ focusedProcedure.procedure.customer.lastName }}
+      · {{ focusedProcedure.procedure.treatment.name if focusedProcedure.procedure.treatment else 'Procedure' }}
+    </p>
+    {% if focusedProcedure.shortfalls.length %}
+    <table class="erp-table">
+      <thead>
+        <tr><th>Product</th><th>Required</th><th>On Hand</th><th>Shortfall</th></tr>
+      </thead>
+      <tbody>
+        {% for s in focusedProcedure.shortfalls %}
+        <tr>
+          <td class="font-medium">{{ s.productName }}</td>
+          <td>{{ s.required }}</td>
+          <td>{{ s.onHand }}</td>
+          <td class="font-semibold text-red-600">{{ s.shortfall }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-sm text-emerald-700">All kit items available for this procedure.</p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header">
+      <h3 class="font-semibold">Below Reorder Level</h3>
+      <span class="text-xs text-slate-500">{{ lowStock | length }} SKUs</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="erp-table">
+        <thead>
+          <tr><th>Product</th><th>On Hand</th><th>Reorder</th><th>Gap</th></tr>
+        </thead>
+        <tbody>
+          {% for s in lowStock %}
+          <tr>
+            <td>
+              <div class="font-medium">{{ s.productName }}</div>
+              <div class="text-xs text-slate-500 font-mono">{{ s.sku }}</div>
+            </td>
+            <td>{{ s.onHand }}</td>
+            <td>{{ s.reorderLevel }}</td>
+            <td class="font-semibold text-red-600">{{ s.shortfall }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="erp-empty-cell">No reorder breaches</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header">
+      <h3 class="font-semibold">Advance Kit Gaps</h3>
+      <span class="text-xs text-slate-500">{{ kitShortfalls | length }} kits</span>
+    </div>
+    <div class="erp-card-body space-y-4 max-h-96 overflow-y-auto">
+      {% for kit in kitShortfalls %}
+      <div class="border border-surface-border rounded-lg p-3">
+        <div class="font-medium text-sm">{{ kit.kitName }} <span class="text-slate-400 font-mono text-xs">({{ kit.kitCode }})</span></div>
+        <ul class="mt-2 space-y-1 text-xs text-slate-600">
+          {% for item in kit.items %}
+          <li>{{ item.productName }}: need {{ item.required }}, have {{ item.onHand }} <span class="text-red-600">(−{{ item.shortfall }})</span></li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% else %}
+      <p class="erp-empty-cell">All advance kits fully stocked</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="erp-card erp-table-card xl:col-span-1">
+    <div class="erp-card-header">
+      <h3 class="font-semibold">Upcoming Procedures</h3>
+      <span class="text-xs text-slate-500">{{ procedureShortfalls | length }} with gaps</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="erp-table">
+        <thead>
+          <tr><th>Procedure</th><th>Customer</th><th>Gap</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for ps in procedureShortfalls %}
+          <tr>
+            <td class="font-mono text-xs">{{ ps.procedure.procedureNo }}</td>
+            <td>{{ ps.procedure.customer.firstName }}</td>
+            <td class="font-semibold text-red-600">{{ ps.totalShortfall }}</td>
+            <td>
+              <a href="/inventory/kit-shortfall?branchId={{ branchId }}&procedureId={{ ps.procedure.id }}" class="text-xs text-accent-600 hover:underline">Details</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="erp-empty-cell">No procedure kit shortfalls</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

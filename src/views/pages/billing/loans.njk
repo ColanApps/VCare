@@ -1,0 +1,139 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Loan Estimate & Installments') %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+  <div class="erp-card" x-data="loanCalculator()">
+    <div class="erp-card-header"><h3 class="font-semibold">Create Loan Estimate</h3></div>
+    <form method="POST" action="/billing/loans" class="erp-card-body space-y-4">
+      <div>
+        <label class="erp-label">Customer *</label>
+        <select name="customerId" class="erp-select" required>
+          <option value="">Select customer</option>
+          {% for c in customers %}
+          <option value="{{ c.id }}">{{ c.firstName }} {{ c.lastName }} ({{ c.uhid }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Linked Bill (optional)</label>
+        <select name="billId" class="erp-select">
+          <option value="">No bill link</option>
+          {% for b in bills %}
+          <option value="{{ b.id }}">{{ b.billNo }} — {{ b.customer.firstName }} (Bal: {{ b.balanceAmount | currency }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Principal (₹) *</label>
+        <input type="number" name="principal" class="erp-input" step="0.01" min="1" required x-model.number="principal" @input="calcEmi()">
+      </div>
+      <div>
+        <label class="erp-label">Interest Rate (% p.a.)</label>
+        <input type="number" name="interestRate" class="erp-input" step="0.01" value="12" x-model.number="rate" @input="calcEmi()">
+      </div>
+      <div>
+        <label class="erp-label">Tenure (months)</label>
+        <input type="number" name="tenureMonths" class="erp-input" value="6" min="1" max="60" x-model.number="tenure" @input="calcEmi()">
+      </div>
+      <div class="p-3 bg-accent-50 rounded-lg text-sm">
+        <div class="flex justify-between"><span class="text-slate-600">Estimated EMI</span><span class="font-semibold text-accent-700" x-text="emiDisplay"></span></div>
+        <div class="flex justify-between mt-1"><span class="text-slate-600">Total Payable</span><span class="font-medium" x-text="totalDisplay"></span></div>
+      </div>
+      <button type="submit" class="erp-btn-primary w-full">Create Loan Estimate</button>
+    </form>
+  </div>
+
+  <div class="lg:col-span-2 space-y-6">
+    {% for loan in loans %}
+    <div class="erp-card">
+      <div class="erp-card-header flex items-center justify-between">
+        <div>
+          <h3 class="font-semibold font-mono">{{ loan.loanNo }}</h3>
+          <p class="text-sm text-slate-500">{{ loan.customer.firstName }} {{ loan.customer.lastName }} · Principal {{ loan.principal | currency }} @ {{ loan.interestRate }}%</p>
+        </div>
+        {{ statusBadge(loan.status) }}
+      </div>
+      <div class="erp-card-body">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
+          <div><span class="text-slate-500">EMI</span><div class="font-medium">{{ loan.emiAmount | currency }}</div></div>
+          <div><span class="text-slate-500">Tenure</span><div class="font-medium">{{ loan.tenureMonths }} months</div></div>
+          <div><span class="text-slate-500">Total Payable</span><div class="font-medium">{{ loan.totalPayable | currency }}</div></div>
+          <div><span class="text-slate-500">Paid</span><div class="font-medium text-emerald-600">{{ loan.paidAmount | currency }}</div></div>
+        </div>
+
+        {% if loan.status == 'PENDING' %}
+        <form method="POST" action="/billing/loans/{{ loan.id }}/approve" class="mb-4">
+          <button type="submit" class="erp-btn-primary text-sm" onclick="return confirm('Approve loan and generate installment schedule?')">Approve & Generate Schedule</button>
+        </form>
+        {% endif %}
+
+        {% if loan.installments | length > 0 %}
+        <div class="overflow-x-auto">
+        <table class="erp-table text-sm">
+          <thead><tr><th>#</th><th>Due Date</th><th>EMI</th><th>Paid</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody>
+            {% for inst in loan.installments %}
+            <tr>
+              <td>{{ inst.installmentNo }}</td>
+              <td class="text-xs">{{ inst.dueDate | date }}</td>
+              <td>{{ inst.amount | currency }}</td>
+              <td>{{ inst.paidAmount | currency }}</td>
+              <td>{{ statusBadge(inst.status) }}</td>
+              <td>
+                {% if inst.status != 'PAID' %}
+                <form method="POST" action="/billing/loans/installments/{{ inst.id }}/pay" class="flex gap-1 items-center">
+                  <input type="hidden" name="amount" value="{{ inst.amount - inst.paidAmount }}">
+                  <select name="paymentMode" class="erp-select text-xs py-1">
+                    <option value="CASH">Cash</option>
+                    <option value="UPI">UPI</option>
+                    <option value="CARD">Card</option>
+                  </select>
+                  <button type="submit" class="erp-btn-secondary text-xs py-1">Pay</button>
+                </form>
+                {% else %}—{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="erp-card"><div class="erp-card-body text-center text-slate-400 py-12">No loan accounts yet</div></div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function loanCalculator() {
+  return {
+    principal: 10000,
+    rate: 12,
+    tenure: 6,
+    emi: 0,
+    emiDisplay: '₹0',
+    totalDisplay: '₹0',
+    init() { this.calcEmi(); },
+    calcEmi() {
+      const p = this.principal || 0;
+      const r = (this.rate || 0) / 12 / 100;
+      const n = this.tenure || 1;
+      if (p <= 0) { this.emi = 0; }
+      else if (r === 0) { this.emi = p / n; }
+      else { this.emi = (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1); }
+      this.emi = Math.round(this.emi * 100) / 100;
+      this.emiDisplay = '₹' + this.emi.toLocaleString('en-IN');
+      this.totalDisplay = '₹' + (this.emi * n).toLocaleString('en-IN');
+    }
+  };
+}
+</script>
+{% endblock %}

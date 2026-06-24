@@ -1,0 +1,232 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% set procedureSubtitle = procedure.customer.firstName ~ ' ' ~ procedure.customer.lastName ~ ' · ' ~ (procedure.scheduledAt | datetime) %}
+{% if procedure.sessionNo and procedure.treatmentSlip %}
+{% set procedureSubtitle = procedureSubtitle ~ ' · Session ' ~ procedure.sessionNo ~ ' of ' ~ procedure.treatmentSlip.sessions %}
+{% endif %}
+{% call pageToolbar('Procedure ' ~ procedure.procedureNo, procedureSubtitle) %}
+  <a href="{{ workflowUrl }}" class="erp-btn-secondary text-sm">Clinical Workflow</a>
+  {% if procedure.sessionNo and procedure.treatmentSlip %}
+  <span class="erp-badge-neutral">Session {{ procedure.sessionNo }} of {{ procedure.treatmentSlip.sessions }}</span>
+  {% endif %}
+  {{ statusBadge(procedure.status) }}
+{% endcall %}
+
+<div class="erp-triple-grid mb-6">
+  <div class="lg:col-span-2 space-y-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="erp-card">
+        <div class="erp-card-header"><h3 class="font-semibold">Consent</h3></div>
+        <div class="erp-card-body space-y-4">
+          {% if procedure.consentGiven %}
+          <div class="flex items-center gap-2 text-emerald-600">
+            <span class="erp-badge-success">Consent Given</span>
+            {% if procedure.consentFormPath %}
+            <a href="{{ procedure.consentFormPath }}" target="_blank" class="text-xs text-accent-600 hover:underline">View form</a>
+            <a href="/appointments/procedures/{{ procedure.id }}/consent-pdf" class="text-xs text-slate-500 hover:underline">Regenerate PDF</a>
+            {% else %}
+            <a href="/appointments/procedures/{{ procedure.id }}/consent-pdf" class="erp-btn-secondary text-xs">Generate Consent PDF</a>
+            {% endif %}
+          </div>
+          {% else %}
+          <form method="POST" action="/appointments/procedures/{{ procedure.id }}/consent" class="flex items-center gap-3">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="consent" value="1" class="rounded border-slate-300 text-accent-600" required>
+              <span class="text-sm">Patient consent obtained verbally</span>
+            </label>
+            <button type="submit" class="erp-btn-primary text-sm">Record Consent</button>
+          </form>
+          <div class="pt-3 border-t border-surface-border">
+            <form method="POST" action="/appointments/procedures/{{ procedure.id }}/consent-form" enctype="multipart/form-data" class="space-y-3">
+              <div>
+                <label class="erp-label">Upload Signed Consent Form</label>
+                <input type="file" name="consentForm" accept=".pdf,image/*" class="erp-input" required>
+              </div>
+              <button type="submit" class="erp-btn-secondary w-full">Upload Consent Form</button>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="erp-card">
+        <div class="erp-card-header"><h3 class="font-semibold">Procedure Photos</h3></div>
+        <div class="erp-card-body space-y-4">
+          <form method="POST" action="/appointments/procedures/{{ procedure.id }}/photo" enctype="multipart/form-data" class="space-y-3">
+            <input type="hidden" name="type" value="PROCEDURE_PRE">
+            <div>
+              <label class="erp-label">Pre-Procedure Photo</label>
+              <input type="file" name="photo" accept="image/*" class="erp-input" required>
+            </div>
+            <div>
+              <label class="erp-label">Caption</label>
+              <input type="text" name="caption" class="erp-input" placeholder="Optional caption">
+            </div>
+            <button type="submit" class="erp-btn-secondary w-full">Upload Pre Photo</button>
+          </form>
+          <form method="POST" action="/appointments/procedures/{{ procedure.id }}/photo" enctype="multipart/form-data" class="space-y-3 pt-3 border-t border-surface-border">
+            <input type="hidden" name="type" value="PROCEDURE_POST">
+            <div>
+              <label class="erp-label">Post-Procedure Photo</label>
+              <input type="file" name="photo" accept="image/*" class="erp-input" required>
+            </div>
+            <div>
+              <label class="erp-label">Caption</label>
+              <input type="text" name="caption" class="erp-input" placeholder="Optional caption">
+            </div>
+            <button type="submit" class="erp-btn-secondary w-full">Upload Post Photo</button>
+          </form>
+          <form method="POST" action="/appointments/procedures/{{ procedure.id }}/photo" enctype="multipart/form-data" class="space-y-3 pt-3 border-t border-surface-border">
+            <input type="hidden" name="type" value="PROCEDURE_POST_HT">
+            <div>
+              <label class="erp-label">Post HT Photo</label>
+              <input type="file" name="photo" accept="image/*" class="erp-input" required>
+            </div>
+            <div>
+              <label class="erp-label">Caption</label>
+              <input type="text" name="caption" class="erp-input" placeholder="Optional caption">
+            </div>
+            <button type="submit" class="erp-btn-secondary w-full">Upload Post HT Photo</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    {% if photos | length > 0 %}
+    <div class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Uploaded Photos</h3></div>
+      <div class="erp-card-body grid grid-cols-2 md:grid-cols-4 gap-4">
+        {% for photo in photos %}
+        <div class="rounded-lg overflow-hidden border border-surface-border">
+          {% if photo.filePath %}
+          <img src="{{ photo.filePath }}" alt="{{ photo.type }}" class="w-full h-32 object-cover">
+          {% else %}
+          <div class="w-full h-32 bg-slate-100 flex items-center justify-center text-xs text-slate-400">{{ photo.type }}</div>
+          {% endif %}
+          <div class="p-2 text-xs text-slate-500">{{ photo.type | replace('_', ' ') }}{% if photo.caption %} · {{ photo.caption }}{% endif %}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="erp-card">
+      <div class="erp-card-header flex justify-between items-center">
+        <h3 class="font-semibold">Clinical Consumption</h3>
+        {% if readiness and readiness.consumptionApplied %}
+        <span class="erp-badge-success">Applied</span>
+        {% else %}
+        <span class="erp-badge-warning">Pending</span>
+        {% endif %}
+      </div>
+      <div class="erp-card-body space-y-4">
+        {% if readiness and readiness.consumptionPlan.length %}
+        <p class="text-sm text-slate-500">Planned products for this procedure type:</p>
+        <ul class="space-y-2">
+          {% for row in readiness.consumptionPlan %}
+          <li class="flex items-center justify-between rounded-lg px-3 py-2 border border-surface-border text-sm">
+            <span>{{ row.product.name }}</span>
+            <div class="flex items-center gap-2">
+              <span class="text-slate-500">× {{ row.quantity }}</span>
+              {% if readiness.consumptionApplied %}
+              <span class="erp-badge-success text-[10px]">Applied</span>
+              {% else %}
+              <span class="erp-badge-warning text-[10px]">Pending</span>
+              {% endif %}
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% if not readiness.consumptionApplied %}
+        <form method="POST" action="/clinical/procedure/{{ procedure.id }}/apply-consumption">
+          <button type="submit" class="erp-btn-primary">Apply Consumption</button>
+        </form>
+        {% endif %}
+        {% else %}
+        <p class="text-sm text-slate-500">No planned consumption configured for this procedure type.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if procedure.status != 'COMPLETED' %}
+    <div class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Complete Procedure</h3></div>
+      <form method="POST" action="/appointments/procedures/{{ procedure.id }}/complete" class="erp-card-body">
+        <div class="mb-4">
+          <label class="erp-label">Completion Notes</label>
+          <textarea name="notes" class="erp-input" rows="2" placeholder="Post-procedure notes...">{{ procedure.notes or '' }}</textarea>
+        </div>
+        <button type="submit" class="erp-btn-primary">Mark Procedure Complete</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="space-y-6 h-fit self-start">
+    <div class="erp-card border-accent-200">
+      <div class="erp-card-header"><h3 class="font-semibold">Readiness Checklist</h3></div>
+      <div class="erp-card-body space-y-3">
+        {% if readiness %}
+        <div class="flex items-center justify-between">
+          <span class="text-sm">Consent</span>
+          {% if readiness.consent %}<span class="erp-badge-success">Ready</span>{% else %}<span class="erp-badge-warning">Pending</span>{% endif %}
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-sm">Photos</span>
+          {% if readiness.prePhoto and readiness.postPhoto %}<span class="erp-badge-success">Ready</span>{% else %}<span class="erp-badge-warning">Pending</span>{% endif %}
+        </div>
+        <div class="text-xs text-slate-400 pl-1">
+          Pre: {% if readiness.prePhoto %}✓{% else %}—{% endif %} · Post: {% if readiness.postPhoto %}✓{% else %}—{% endif %}
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-sm">Consumption</span>
+          {% if readiness.consumptionApplied %}<span class="erp-badge-success">Ready</span>{% else %}<span class="erp-badge-warning">Pending</span>{% endif %}
+        </div>
+        {% if readiness.canComplete %}
+        <p class="text-xs text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2 mt-2">All readiness checks passed.</p>
+        {% elif readiness.blockers.length %}
+        <ul class="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 mt-2 space-y-1">
+          {% for b in readiness.blockers %}<li>• {{ b }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Quick Actions</h3></div>
+      <div class="erp-card-body space-y-2">
+        <a href="{{ workflowUrl }}" class="erp-btn-secondary w-full text-sm text-center block">Clinical Workflow</a>
+        {% if procedure.status == 'BOOKED' %}
+        <form method="POST" action="/clinical/procedure/{{ procedure.id }}/start">
+          <button type="submit" class="erp-btn-primary w-full text-sm">Start Procedure</button>
+        </form>
+        {% endif %}
+        {% if procedure.status != 'COMPLETED' and not procedure.billId %}
+        <form method="POST" action="/clinical/procedure/{{ procedure.id }}/complete-bill">
+          <button type="submit" class="erp-btn-primary w-full text-sm" {% if readiness and not readiness.canComplete %}disabled title="{{ readiness.blockers | join('; ') }}"{% endif %}>Complete & Bill</button>
+        </form>
+        {% endif %}
+        {% if procedure.pharmacyBillId %}
+        <a href="/billing/{{ procedure.pharmacyBillId }}" class="erp-btn-secondary w-full text-sm text-center block">Pharmacy Bill (PHM)</a>
+        {% endif %}
+        {% if procedure.billId %}
+        <a href="/billing/{{ procedure.billId }}" class="erp-btn-secondary w-full text-sm text-center block">Service Bill</a>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if procedure.treatment %}
+    <div class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Treatment</h3></div>
+      <div class="erp-card-body text-sm">
+        <p class="font-medium">{{ procedure.treatment.name }}</p>
+        <p class="text-slate-500 mt-1">{{ procedure.treatment.basePrice | currency }}</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

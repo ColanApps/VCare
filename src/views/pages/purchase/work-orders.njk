@@ -1,0 +1,84 @@
+{% extends "layouts/main.njk" %}
+
+{% from "macros/components.njk" import statusBadge %}
+
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+
+{% block content %}
+
+{% call pageToolbar('Work Orders', 'Branch work orders and vendor jobs') %}
+
+  {{ modalTrigger('Create WO', '/purchase/work-orders/create', 'Create Work Order', 'lg') }}
+
+{% endcall %}
+
+
+
+<div class="erp-card erp-table-card overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+
+    <thead><tr><th>WO No</th><th>Branch</th><th>Vendor</th><th>Description</th><th>Items</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+
+    <tbody>
+
+      {% for o in orders %}
+
+      <tr>
+
+        <td class="font-mono text-xs font-medium">{{ o.woNo }}</td>
+
+        <td>{{ o.branch.name }}</td>
+
+        <td>{{ o.vendor.name if o.vendor else '—' }}</td>
+
+        <td class="text-sm max-w-xs truncate">{{ o.description or '—' }}</td>
+
+        <td class="text-xs">{{ o.items | length }} lines</td>
+
+        <td>{{ statusBadge(o.status) }}</td>
+
+        <td class="text-xs text-slate-500">{{ o.createdAt | date }}</td>
+
+        <td class="space-x-1">
+
+          {% if o.status == 'PENDING_AUTH' %}
+
+          <form method="POST" action="/purchase/work-orders/{{ o.id }}/authorize" class="inline">
+
+            <input type="hidden" name="action" value="approve">
+
+            <button type="submit" class="erp-btn-secondary text-xs py-1">Approve</button>
+
+          </form>
+
+          {% endif %}
+
+          {% if o.status == 'APPROVED' %}
+
+          <form method="POST" action="/purchase/work-orders/{{ o.id }}/complete" class="inline">
+
+            <button type="submit" class="erp-btn-primary text-xs py-1">Complete</button>
+
+          </form>
+
+          {% endif %}
+
+        </td>
+
+      </tr>
+
+      {% else %}
+
+      <tr><td colspan="8" class="erp-empty-cell">No work orders</td></tr>
+
+      {% endfor %}
+
+    </tbody>
+
+  </table>
+  </div>
+</div>
+
+{% endblock %}
+

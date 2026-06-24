@@ -1,0 +1,38 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+{% block content %}
+{% call pageToolbar('Asset Purchase Orders', 'Capital asset procurement') %}
+  {{ modalTrigger('Create Asset PO', '/purchase/asset-po/form', 'New Asset PO', 'lg') }}
+  <a href="/purchase/asset-po/authorize" class="erp-btn-secondary">Authorize</a>
+  <a href="/purchase/asset-grn" class="erp-btn-secondary">Asset GRN</a>
+{% endcall %}
+<form method="GET" class="erp-filter-bar mb-4">
+  <input type="text" name="q" value="{{ filters.q or '' }}" class="erp-input flex-1" placeholder="PO no, vendor…">
+  <select name="status" class="erp-select"><option value="">All</option>
+    {% for s in ['PENDING_AUTH','APPROVED','CANCELLED'] %}<option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+  </select>
+  <button type="submit" class="erp-btn-secondary">Search</button>
+</form>
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+    <thead><tr><th>APO No</th><th>Vendor</th><th>Lines</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
+    <tbody>
+      {% for o in orders %}
+      <tr>
+        <td class="font-mono text-xs">{{ o.apoNo }}</td>
+        <td>{{ o.vendor.name if o.vendor else '—' }}</td>
+        <td>{{ o.items | length }}</td>
+        <td>{{ o.totalAmount | currency }}</td>
+        <td>{{ statusBadge(o.status) }}</td>
+        <td class="text-xs">{{ o.createdAt | date }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="erp-empty-cell">No asset POs</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

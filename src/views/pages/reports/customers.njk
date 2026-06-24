@@ -1,0 +1,45 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Customer Engagement Report') %}
+{% endcall %}
+
+<div class="erp-card erp-table-card">
+  <div class="erp-card-header">
+    <h3 class="font-semibold">Customer Activity</h3>
+    <span class="text-xs text-slate-500">{{ customers | length }} customers</span>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>UHID</th>
+          <th>Name</th>
+          <th>Branch</th>
+          <th>Category</th>
+          <th>Appointments</th>
+          <th>Consultations</th>
+          <th>Bills</th>
+          <th>Registered</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in customers %}
+        <tr>
+          <td class="font-mono text-xs"><a href="/customer/{{ c.id }}" class="text-accent-600 hover:underline">{{ c.uhid }}</a></td>
+          <td class="font-medium">{{ c.firstName }} {{ c.lastName }}</td>
+          <td>{{ c.branch.name }}</td>
+          <td><span class="erp-badge-neutral">{{ c.category }}</span></td>
+          <td class="text-center">{{ c._count.appointments | number }}</td>
+          <td class="text-center">{{ c._count.consultations | number }}</td>
+          <td class="text-center">{{ c._count.bills | number }}</td>
+          <td class="text-xs text-slate-500">{{ c.registeredAt | date }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="erp-empty-cell">No customer data</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

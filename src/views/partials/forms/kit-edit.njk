@@ -1,0 +1,11 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/registry/forms/kit/{{ kit.id }}" class="erp-modal-form" hx-post="/registry/forms/kit/{{ kit.id }}" hx-swap="none">
+  <input type="hidden" name="returnPath" value="{{ returnPath or '' }}">
+  <div class="erp-form-grid">
+    <div class="erp-field"><label class="erp-label">Kit Code</label><input class="erp-input" value="{{ kit.kitCode }}" readonly></div>
+    <div class="erp-field"><label class="erp-label">Name</label><input name="name" class="erp-input" value="{{ kit.name }}" required></div>
+    <div class="erp-field"><label class="erp-label">Type</label><input name="mapType" class="erp-input" value="{{ kit.mapType }}"></div>
+    <div class="erp-field sm:col-span-2"><label class="erp-label">Items JSON</label><textarea name="itemsJson" class="erp-input" rows="3">{{ kit.itemsJson or '' }}</textarea></div>
+  </div>
+  {{ formFooter('Update Kit') }}
+</form>

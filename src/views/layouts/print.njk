@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ title }}</title>
+  <link rel="stylesheet" href="/css/app.css">
+  <style>@media print { .no-print { display: none; } }</style>
+</head>
+<body class="p-8 bg-white text-slate-900">
+  {% block content %}{% endblock %}
+  <div class="no-print mt-6">
+    <button onclick="window.print()" class="erp-btn-primary">Print</button>
+    <a href="javascript:history.back()" class="erp-btn-secondary ml-2">Back</a>
+  </div>
+</body>
+</html>

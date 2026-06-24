@@ -1,0 +1,75 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Treatment Status') %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header">
+      <h3 class="font-semibold text-slate-900">Today's Procedures</h3>
+      <span class="text-xs text-slate-500">{{ procedures | length }} scheduled</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="erp-table">
+        <thead>
+          <tr>
+            <th>Procedure No</th>
+            <th>Customer</th>
+            <th>Scheduled</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for proc in procedures %}
+          <tr>
+            <td class="font-mono text-xs">{{ proc.procedureNo }}</td>
+            <td>
+              <a href="/customer/{{ proc.customer.id }}" class="hover:underline">{{ proc.customer.firstName }} {{ proc.customer.lastName }}</a>
+            </td>
+            <td class="font-mono text-xs">{{ proc.scheduledAt | datetime }}</td>
+            <td>{{ statusBadge(proc.status) }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="erp-empty-cell">No procedures scheduled today</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+  </div>
+  </div>
+
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header">
+      <h3 class="font-semibold text-slate-900">Treatment Appointments</h3>
+      <span class="text-xs text-slate-500">{{ appointments | length }} scheduled</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="erp-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Customer</th>
+            <th>Consultant</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for apt in appointments %}
+          <tr>
+            <td class="font-mono text-xs">{{ apt.scheduledAt | datetime }}</td>
+            <td>
+              <a href="/customer/{{ apt.customer.id }}" class="hover:underline">{{ apt.customer.firstName }} {{ apt.customer.lastName }}</a>
+            </td>
+            <td>{% if apt.consultant %}{{ apt.consultant.firstName }} {{ apt.consultant.lastName }}{% else %}—{% endif %}</td>
+            <td>{{ statusBadge(apt.status) }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="erp-empty-cell">No treatment appointments today</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+  </div>
+  </div>
+</div>
+{% endblock %}

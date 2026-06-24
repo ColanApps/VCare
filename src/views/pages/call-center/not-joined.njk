@@ -1,0 +1,99 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Not Joined Follow-Up') %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Schedule Follow-Up</h3></div>
+    <form method="POST" action="/call-center/follow-ups" class="erp-card-body space-y-4">
+      <input type="hidden" name="type" value="NOT_JOINED">
+      <input type="hidden" name="redirect" value="/call-center/not-joined">
+      <div>
+        <label class="erp-label">Prospect / Customer *</label>
+        <select name="customerId" class="erp-select" required>
+          <option value="">Select prospect</option>
+          {% for p in prospects %}
+          <option value="{{ p.id }}">{{ p.firstName }} {{ p.lastName }} ({{ p.uhid }}) — {{ p.branch.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Scheduled At</label>
+        <input type="datetime-local" name="scheduledAt" class="erp-input">
+      </div>
+      <div>
+        <label class="erp-label">Next Follow-Up</label>
+        <input type="datetime-local" name="nextFollowUp" class="erp-input">
+      </div>
+      <div>
+        <label class="erp-label">Feedback / Notes</label>
+        <textarea name="feedback" class="erp-input" rows="3" placeholder="Call notes, reason for not joining..."></textarea>
+      </div>
+      <button type="submit" class="erp-btn-primary w-full">Schedule Follow-Up</button>
+    </form>
+  </div>
+
+  <div class="lg:col-span-2 space-y-6">
+    <div class="erp-card">
+      <div class="erp-card-header">
+        <h3 class="font-semibold">Recent Prospects (No Bills)</h3>
+        <span class="text-xs text-slate-500">{{ prospects | length }} prospects</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+          <thead>
+            <tr><th>Customer</th><th>UHID</th><th>Phone</th><th>Branch</th><th>Registered</th></tr>
+          </thead>
+          <tbody>
+            {% for p in prospects %}
+            <tr>
+              <td>
+                <a href="/customer/{{ p.id }}" class="hover:underline font-medium">{{ p.firstName }} {{ p.lastName }}</a>
+              </td>
+              <td class="font-mono text-xs">{{ p.uhid }}</td>
+              <td class="font-mono text-xs">{{ p.phone }}</td>
+              <td>{{ p.branch.name }}</td>
+              <td class="text-xs text-slate-500">{{ p.registeredAt | date }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="erp-empty-cell">No prospects found</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+    </div>
+    </div>
+
+    <div class="erp-card erp-table-card">
+      <div class="erp-card-header">
+        <h3 class="font-semibold">Not Joined Follow-Ups</h3>
+        <span class="text-xs text-slate-500">{{ followUps | length }} records</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+          <thead>
+            <tr><th>Customer</th><th>Scheduled</th><th>Feedback</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            {% for fu in followUps %}
+            <tr>
+              <td>
+                <a href="/customer/{{ fu.customer.id }}" class="hover:underline font-medium">{{ fu.customer.firstName }} {{ fu.customer.lastName }}</a>
+                <div class="text-[10px] text-slate-400 font-mono">{{ fu.customer.uhid }}</div>
+              </td>
+              <td class="text-xs">{% if fu.scheduledAt %}{{ fu.scheduledAt | datetime }}{% else %}—{% endif %}</td>
+              <td class="text-sm text-slate-600 max-w-xs truncate">{{ fu.feedback or '—' }}</td>
+              <td>{{ statusBadge(fu.status) }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="erp-empty-cell">No follow-ups recorded</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+    </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

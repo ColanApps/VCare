@@ -1,0 +1,29 @@
+{% extends "layouts/main.njk" %}
+{% from "partials/report-filters.njk" import reportPeriodFilter %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Branch Collection Report', period.from | date ~ ' — ' ~ period.to | date) %}
+{% endcall %}
+{{ reportPeriodFilter('/reports/collection', period) }}
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+    <thead><tr><th>Branch</th><th>Billed</th><th>Collected</th><th>Collection %</th><th>Outstanding</th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td class="font-medium">{{ row.branch.name }}</td>
+        <td>{{ row.billed | currency }}</td>
+        <td class="font-medium text-emerald-600">{{ row.collected | currency }}</td>
+        <td>{{ ((row.collected / row.billed * 100) if row.billed > 0 else 0) | round(1) }}%</td>
+        <td class="text-amber-600">{{ (row.billed - row.collected) | currency }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="erp-empty-cell">No data for period</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

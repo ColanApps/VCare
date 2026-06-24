@@ -1,0 +1,29 @@
+{% macro statusBadge(status) %}
+<span class="erp-badge-{{ status | statusColor }}">{{ status | replace('_', ' ') }}</span>
+{% endmacro %}
+
+{% macro kpiCard(label, value, icon, color='accent', trend=null) %}
+<div class="erp-kpi">
+  <div class="flex items-start justify-between">
+    <div>
+      <div class="erp-kpi-label">{{ label }}</div>
+      <div class="erp-kpi-value mt-1">{{ value }}</div>
+      {% if trend %}<div class="text-xs text-emerald-600 mt-1 font-medium">{{ trend }}</div>{% endif %}
+    </div>
+    <div class="w-10 h-10 rounded-xl bg-{{ color }}-50 flex items-center justify-center text-{{ color }}-600">
+      {{ icon | safe }}
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro dataTable(headers) %}
+<div class="erp-card overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead><tr>{% for h in headers %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+      <tbody>{{ caller() }}</tbody>
+    </table>
+  </div>
+</div>
+{% endmacro %}

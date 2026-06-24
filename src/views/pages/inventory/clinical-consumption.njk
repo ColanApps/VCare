@@ -1,0 +1,87 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Clinical Consumption') %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Record Consumption</h3></div>
+    <form method="POST" action="/inventory/clinical-consumption" class="erp-card-body space-y-4">
+      <div>
+        <label class="erp-label">Product *</label>
+        <select name="productId" class="erp-select" required>
+          <option value="">Select clinical product</option>
+          {% for p in products %}
+          <option value="{{ p.id }}">{{ p.name }} ({{ p.sku }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Customer</label>
+        <select name="customerId" class="erp-select" id="customer-select">
+          <option value="">Optional — link to customer</option>
+          {% for c in customers %}
+          <option value="{{ c.id }}" data-branch="{{ c.branchId }}">{{ c.firstName }} {{ c.lastName }} ({{ c.uhid }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Branch</label>
+        <input type="text" name="branchId" id="branch-id" class="erp-input" placeholder="Defaults to your branch">
+      </div>
+      <div>
+        <label class="erp-label">Quantity *</label>
+        <input type="number" name="quantity" class="erp-input" min="1" value="1" required>
+      </div>
+      <div>
+        <label class="erp-label">Notes</label>
+        <textarea name="notes" class="erp-input" rows="2" placeholder="Procedure or session reference..."></textarea>
+      </div>
+      <button type="submit" class="erp-btn-primary w-full">Record Consumption</button>
+    </form>
+  </div>
+
+  <div class="lg:col-span-2 erp-card">
+    <div class="erp-card-header">
+      <h3 class="font-semibold">Consumption Log</h3>
+      <span class="text-xs text-slate-500">{{ consumptions | length }} records</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="erp-table">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>SKU</th>
+            <th>Branch</th>
+            <th>Quantity</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in consumptions %}
+          <tr>
+            <td class="font-medium">{{ c.product.name }}</td>
+            <td class="font-mono text-xs">{{ c.product.sku }}</td>
+            <td>{{ c.branch.name }}</td>
+            <td class="font-semibold text-red-600">−{{ c.quantity | number }}</td>
+            <td class="text-xs text-slate-500">{{ c.consumedAt | datetime }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="erp-empty-cell">No consumption recorded</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+  </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('customer-select')?.addEventListener('change', function () {
+    const branch = this.options[this.selectedIndex]?.dataset.branch;
+    if (branch) document.getElementById('branch-id').value = branch;
+  });
+</script>
+{% endblock %}

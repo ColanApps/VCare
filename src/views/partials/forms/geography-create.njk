@@ -1,0 +1,21 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/master/geography/{% if level == 'country' %}country{% elif level == 'state' %}state{% elif level == 'city' %}city{% else %}area{% endif %}" class="erp-modal-form" hx-post="/master/geography/{% if level == 'country' %}country{% elif level == 'state' %}state{% elif level == 'city' %}city{% else %}area{% endif %}" hx-swap="none">
+  <div class="erp-form-grid">
+    {% if level == 'state' %}
+    <div class="erp-field"><label class="erp-label">Country</label>
+      <select name="countryId" class="erp-select" required>{% for c in countries %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+    </div>
+    {% elif level == 'city' %}
+    <div class="erp-field"><label class="erp-label">State</label>
+      <select name="stateId" class="erp-select" required>{% for s in states %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select>
+    </div>
+    {% elif level == 'area' %}
+    <div class="erp-field"><label class="erp-label">City</label>
+      <select name="cityId" class="erp-select" required>{% for c in cities %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+    </div>
+    {% endif %}
+    <div class="erp-field"><label class="erp-label">Code</label><input name="code" class="erp-input" required maxlength="6"></div>
+    <div class="erp-field"><label class="erp-label">Name</label><input name="name" class="erp-input" required></div>
+  </div>
+  {{ formFooter('Add ' + level) }}
+</form>

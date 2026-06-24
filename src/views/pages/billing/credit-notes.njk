@@ -1,0 +1,29 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% block content %}
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+    <thead>
+      <tr><th>Credit Note No</th><th>Bill</th><th>Customer</th><th>Type</th><th>Amount</th><th>Reason</th><th>Status</th><th>Date</th></tr>
+    </thead>
+    <tbody>
+      {% for cn in creditNotes %}
+      <tr>
+        <td class="font-mono text-xs font-medium">{{ cn.creditNoteNo }}</td>
+        <td><a href="/billing/{{ cn.billId }}" class="text-accent-600 hover:underline">{{ cn.bill.billNo }}</a></td>
+        <td>{{ cn.bill.customer.firstName }} {{ cn.bill.customer.lastName }}</td>
+        <td><span class="erp-badge-neutral">{{ cn.type | replace('_', ' ') }}</span></td>
+        <td class="font-medium">{{ cn.amount | currency }}</td>
+        <td class="text-slate-500">{{ cn.reason | truncate(40) }}</td>
+        <td>{{ statusBadge(cn.status) }}</td>
+        <td class="text-xs text-slate-500">{{ cn.createdAt | date }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="text-center text-slate-400 py-8">No credit notes or refunds issued yet</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

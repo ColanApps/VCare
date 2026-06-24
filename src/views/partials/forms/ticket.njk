@@ -1,0 +1,35 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/operations/tickets" class="erp-modal-form"
+  hx-post="/operations/tickets" hx-swap="none">
+  <div class="erp-form-grid">
+    <div class="erp-field sm:col-span-2"><label class="erp-label">Title *</label><input type="text" name="title" class="erp-input" required></div>
+    <div class="erp-field sm:col-span-2"><label class="erp-label">Description</label><textarea name="description" class="erp-input" rows="3"></textarea></div>
+    <div class="erp-field">
+      <label class="erp-label">Category</label>
+      <select name="category" class="erp-select">
+        <option value="IT">IT</option>
+        <option value="FACILITY">Facility</option>
+        <option value="EQUIPMENT">Equipment</option>
+        <option value="HR">HR</option>
+        <option value="OTHER">Other</option>
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Priority</label>
+      <select name="priority" class="erp-select">
+        <option value="LOW">Low</option>
+        <option value="MEDIUM" selected>Medium</option>
+        <option value="HIGH">High</option>
+        <option value="CRITICAL">Critical</option>
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Assign To</label>
+      <select name="assignedToId" class="erp-select">
+        <option value="">Unassigned</option>
+        {% for u in users %}<option value="{{ u.id }}">{{ u.firstName }} {{ u.lastName }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+  {{ formFooter() }}
+</form>

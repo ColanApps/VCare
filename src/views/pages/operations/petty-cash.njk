@@ -1,0 +1,86 @@
+{% extends "layouts/main.njk" %}
+
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+
+{% block content %}
+
+{% call pageToolbar('Petty Cash', 'Branch petty cash ledger entries') %}
+
+  {{ modalTrigger('New Entry', '/operations/petty-cash/form', 'Record Petty Cash Entry', 'md') }}
+
+{% endcall %}
+
+
+
+<div class="erp-card erp-table-card">
+
+  <div class="erp-card-header">
+
+    <h3 class="font-semibold">Petty Cash Ledger</h3>
+
+    <span class="text-xs text-slate-500">{{ entries | length }} entries</span>
+
+  </div>
+
+  <div class="overflow-x-auto">
+
+    <table class="erp-table">
+
+      <thead>
+
+        <tr>
+
+          <th>Entry No</th>
+
+          <th>Date</th>
+
+          <th>Branch</th>
+
+          <th>Category</th>
+
+          <th>Description</th>
+
+          <th>Amount</th>
+
+          <th>File</th>
+
+        </tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for e in entries %}
+
+        <tr>
+
+          <td class="font-mono text-xs">{{ e.entryNo }}</td>
+
+          <td class="text-xs">{{ e.entryDate | date }}</td>
+
+          <td>{{ e.branch.name }}</td>
+
+          <td><span class="erp-badge-neutral">{{ e.category }}</span></td>
+
+          <td class="text-sm text-slate-600">{{ e.description }}</td>
+
+          <td class="font-medium">{{ e.amount | currency }}</td>
+
+          <td class="text-xs">{% if e.attachmentPath %}<a href="{{ e.attachmentPath }}" class="text-accent-600" target="_blank">View</a>{% else %}—{% endif %}</td>
+
+        </tr>
+
+        {% else %}
+
+        <tr><td colspan="7" class="erp-empty-cell">No petty cash entries</td></tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+</div>
+</div>
+
+{% endblock %}
+

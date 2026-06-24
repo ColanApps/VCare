@@ -1,0 +1,116 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar, hubTile %}
+{% block content %}
+{% call pageToolbar('Finance Hub', 'Collections, reconciliation, incentives & GST — accounts close loop') %}
+  <a href="/dashboard/my-tasks" class="erp-btn-secondary text-sm">My Tasks</a>
+  <a href="/portal/accounts" class="erp-btn-primary text-sm">Collections</a>
+{% endcall %}
+
+<div class="erp-kpi-grid">
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">Today's Sales</div>
+    <div class="erp-kpi-value mt-1">{{ summary.todaySales | currency }}</div>
+    <div class="text-xs text-slate-400 mt-2">{{ summary.todayBillCount }} bills today</div>
+  </div>
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">Today's Collections</div>
+    <div class="erp-kpi-value mt-1 text-emerald-600">{{ summary.todayCollections | currency }}</div>
+    <div class="text-xs text-slate-400 mt-2">Cash & non-cash received</div>
+  </div>
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">AR Outstanding</div>
+    <div class="erp-kpi-value mt-1 text-amber-600">{{ summary.arTotal | currency }}</div>
+    <div class="text-xs text-slate-400 mt-2">{{ summary.arCount }} open bills</div>
+  </div>
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">Month GST Output</div>
+    <div class="erp-kpi-value mt-1">{{ summary.monthGst | currency }}</div>
+    <div class="text-xs text-slate-400 mt-2">{{ summary.monthSales | currency }} month sales</div>
+  </div>
+</div>
+
+<div class="erp-split-grid mb-8">
+  <div class="xl:col-span-2">
+    <h2 class="erp-section-title">Workflows</h2>
+    <div class="erp-hub-grid">
+      {{ hubTile('/finance/ar-aging', 'AR Aging', '30 / 60 / 90 / 120+ day buckets with one-click collect links') }}
+      {% set dayCloseDesc = (summary.pendingDayClose ~ ' branch close(s) awaiting approval') if summary.pendingDayClose else 'Reconcile bills, cash, deposits & DTR for the business day' %}
+      {% set dayCloseBadge = (summary.pendingDayClose ~ ' pending') if summary.pendingDayClose else '' %}
+      {{ hubTile('/finance/day-close', 'Day Close', dayCloseDesc, dayCloseBadge) }}
+      {% set incBadge = (summary.pendingIncentives ~ ' batches') if summary.pendingIncentives else '' %}
+      {{ hubTile('/finance/incentives', 'Incentive Payouts', 'Calculate consultant incentives → approve → mark paid', incBadge) }}
+      {{ hubTile('/finance/gst-export', 'GST Export Pack', 'Period invoice register with CSV download for filing') }}
+      {{ hubTile('/finance/advance-audit', 'Advance Audit', 'Trail of advance receipts applied to bills') }}
+      {{ hubTile('/finance/ledger', 'General Ledger', 'Debit / credit journal entries from bills & payments') }}
+      {{ hubTile('/portal/accounts', 'Collections Queue', 'Quick payment entry against outstanding bills') }}
+      {{ hubTile('/billing/loans', 'Loan & EMI', 'Installment plans, overdue EMIs and collections') }}
+    </div>
+  </div>
+
+  <div class="space-y-6 h-fit self-start">
+    <div class="erp-card">
+      <div class="erp-card-header">
+        <h3 class="font-semibold text-slate-900">Close Status</h3>
+      </div>
+      <div class="erp-card-body space-y-4">
+        <div class="flex justify-between items-center text-sm">
+          <span class="text-slate-500">Day close pending approval</span>
+          <span class="font-semibold {% if summary.pendingDayClose %}text-amber-600{% else %}text-emerald-600{% endif %}">{{ summary.pendingDayClose or 0 }}</span>
+        </div>
+        <div class="flex justify-between items-center text-sm">
+          <span class="text-slate-500">Incentive batches to process</span>
+          <span class="font-semibold">{{ summary.pendingIncentives or 0 }}</span>
+        </div>
+        <div class="flex justify-between items-center text-sm">
+          <span class="text-slate-500">Outstanding AR</span>
+          <span class="font-semibold text-amber-600">{{ summary.arTotal | currency }}</span>
+        </div>
+        <div class="pt-3 border-t border-surface-border flex flex-col gap-2">
+          <a href="/finance/day-close" class="erp-btn-primary w-full text-sm justify-center">Run Day Close</a>
+          <a href="/finance/ar-aging" class="erp-btn-secondary w-full text-sm justify-center">View AR Aging</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="erp-card">
+      <div class="erp-card-header">
+        <h3 class="font-semibold text-slate-900">Quick Links</h3>
+      </div>
+      <div class="erp-card-body space-y-2 text-sm">
+        <a href="/billing/payments" class="flex justify-between py-2 border-b border-slate-100 hover:text-accent-600"><span>Payment register</span><span>→</span></a>
+        <a href="/billing/advances" class="flex justify-between py-2 border-b border-slate-100 hover:text-accent-600"><span>Advance receipts</span><span>→</span></a>
+        <a href="/billing/credit-notes" class="flex justify-between py-2 border-b border-slate-100 hover:text-accent-600"><span>Refunds & credits</span><span>→</span></a>
+        <a href="/reports/gst" class="flex justify-between py-2 hover:text-accent-600"><span>GST reports</span><span>→</span></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="erp-card erp-table-card">
+  <div class="erp-card-header">
+    <h3 class="font-semibold text-slate-900">Recent Day Closes</h3>
+    <a href="/finance/day-close" class="text-xs text-accent-600 font-medium">View all</a>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr><th>Close #</th><th>Branch</th><th>Date</th><th>Collections</th><th>Variance</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for dc in summary.recentCloses %}
+        <tr>
+          <td class="font-mono text-xs">{{ dc.closeNo }}</td>
+          <td>{{ dc.branch.name }}</td>
+          <td>{{ dc.closeDate | date }}</td>
+          <td>{{ dc.collectionsTotal | currency }}</td>
+          <td class="{% if dc.variance != 0 %}text-amber-600 font-medium{% endif %}">{{ dc.variance | currency }}</td>
+          <td><span class="erp-badge-neutral">{{ dc.status }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="erp-empty-cell">No day closes recorded yet. Use Day Close to submit your first reconciliation.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

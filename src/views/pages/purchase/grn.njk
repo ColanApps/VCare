@@ -1,0 +1,156 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Goods Receipt Note') %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Record GRN</h3></div>
+    <form method="POST" action="/purchase/grn" id="grn-form" class="erp-card-body space-y-4">
+      <div>
+        <label class="erp-label">Purchase Order *</label>
+        <select name="poId" id="po-select" class="erp-select" required>
+          <option value="">Select approved PO</option>
+          {% for po in approvedPOs %}
+          <option value="{{ po.id }}">{{ po.poNo }} — {{ po.vendor.name }} ({{ po.totalAmount | currency }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Receiving Branch *</label>
+        <select name="branchId" class="erp-select" required>
+          {% for b in branches %}
+          <option value="{{ b.id }}" {% if warehouse and warehouse.id == b.id %}selected{% endif %}>{{ b.name }}{% if b.type == 'WAREHOUSE' %} (Warehouse){% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div id="grn-items-section" class="hidden">
+        <label class="erp-label">Line Items</label>
+        <table class="erp-table text-sm">
+          <thead><tr><th>Product</th><th>Ordered</th><th>Received</th><th>Qty</th></tr></thead>
+          <tbody id="grn-items-body"></tbody>
+        </table>
+      </div>
+      <input type="hidden" name="items" id="grn-items-json" value="[]">
+      <div>
+        <label class="erp-label">Notes</label>
+        <textarea name="notes" class="erp-input" rows="3" placeholder="Receipt notes, discrepancies..."></textarea>
+      </div>
+      <button type="submit" class="erp-btn-primary w-full">Submit for Quality Check</button>
+    </form>
+  </div>
+
+  <div class="lg:col-span-2 erp-card">
+    <div class="erp-card-header">
+      <h3 class="font-semibold">Approved POs Awaiting Receipt</h3>
+      <span class="text-xs text-slate-500">{{ approvedPOs | length }} orders</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="erp-table">
+        <thead><tr><th>PO No</th><th>Vendor</th><th>Items</th><th>Total</th><th>GRNs</th></tr></thead>
+        <tbody>
+          {% for po in approvedPOs %}
+          <tr>
+            <td class="font-mono text-xs font-medium">{{ po.poNo }}</td>
+            <td>{{ po.vendor.name }}</td>
+            <td>{{ po.items | length }}</td>
+            <td>{{ po.totalAmount | currency }}</td>
+            <td>{{ po.grns | length }} received</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="erp-empty-cell">No approved POs awaiting receipt</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+  </div>
+  </div>
+</div>
+
+<div class="erp-card erp-table-card">
+  <div class="erp-card-header">
+    <h3 class="font-semibold">Recent GRNs</h3>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr><th>GRN No</th><th>PO No</th><th>Vendor</th><th>Status</th><th>Date</th></tr>
+      </thead>
+      <tbody>
+        {% for g in grns %}
+        <tr>
+          <td class="font-mono text-xs font-medium">{{ g.grnNo }}</td>
+          <td class="font-mono text-xs">{{ g.po.poNo }}</td>
+          <td>{{ g.po.vendor.name }}</td>
+          <td>{{ statusBadge(g.status) }}</td>
+          <td class="text-xs text-slate-500">{{ g.createdAt | date }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="erp-empty-cell">No GRNs recorded</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const poData = {
+  {% for po in approvedPOs %}
+  "{{ po.id }}": [
+    {% for item in po.items %}
+    { productId: "{{ item.productId }}", name: "{{ item.product.name }}", sku: "{{ item.product.sku }}", ordered: {{ item.quantity }}, received: {{ item.received }}, remaining: {{ item.quantity - item.received }} },
+    {% endfor %}
+  ],
+  {% endfor %}
+};
+
+const grnItems = [];
+
+function renderGrnItems(poId) {
+  const section = document.getElementById('grn-items-section');
+  const tbody = document.getElementById('grn-items-body');
+  const input = document.getElementById('grn-items-json');
+  grnItems.length = 0;
+
+  const items = poData[poId] || [];
+  if (!items.length) {
+    section.classList.add('hidden');
+    input.value = '[]';
+    return;
+  }
+
+  section.classList.remove('hidden');
+  tbody.innerHTML = items.map((item, i) => {
+    const qty = item.remaining > 0 ? item.remaining : 0;
+    grnItems.push({ productId: item.productId, quantity: qty });
+    return `<tr>
+      <td><span class="font-medium">${item.name}</span><div class="text-[10px] font-mono text-slate-400">${item.sku}</div></td>
+      <td>${item.ordered}</td>
+      <td>${item.received}</td>
+      <td><input type="number" class="erp-input w-20 text-sm grn-qty" data-index="${i}" value="${qty}" min="0" max="${item.remaining}"></td>
+    </tr>`;
+  }).join('');
+
+  input.value = JSON.stringify(grnItems);
+  tbody.querySelectorAll('.grn-qty').forEach(el => {
+    el.addEventListener('input', () => {
+      const idx = parseInt(el.dataset.index, 10);
+      grnItems[idx].quantity = parseInt(el.value, 10) || 0;
+      input.value = JSON.stringify(grnItems);
+    });
+  });
+}
+
+document.getElementById('po-select')?.addEventListener('change', function () {
+  renderGrnItems(this.value);
+});
+
+document.getElementById('grn-form')?.addEventListener('submit', (e) => {
+  const valid = grnItems.some(i => i.quantity > 0);
+  if (!valid) { e.preventDefault(); alert('Enter quantity for at least one item'); }
+});
+</script>
+{% endblock %}

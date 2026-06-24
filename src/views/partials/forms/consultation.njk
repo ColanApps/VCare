@@ -1,0 +1,33 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/customer/consultations" class="erp-modal-form"
+  hx-post="/customer/consultations" hx-swap="none">
+  <div class="erp-form-grid">
+    <div class="erp-field">
+      <label class="erp-label">Customer *</label>
+      <select name="customerId" class="erp-select" required>
+        <option value="">Select customer</option>
+        {% for c in customers %}<option value="{{ c.id }}">{{ c.firstName }} {{ c.lastName }} ({{ c.uhid }})</option>{% endfor %}
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Consultant</label>
+      <select name="consultantId" class="erp-select">
+        <option value="">Current user</option>
+        {% for c in consultants %}<option value="{{ c.id }}">{{ c.firstName }} {{ c.lastName }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Type</label>
+      <select name="type" class="erp-select">
+        <option value="INITIAL">Initial</option>
+        <option value="REGULAR">Regular</option>
+        <option value="FOLLOW_UP">Follow Up</option>
+      </select>
+    </div>
+    <div class="erp-field sm:col-span-2"><label class="erp-label">Chief Complaint</label><textarea name="chiefComplaint" class="erp-input" rows="2"></textarea></div>
+    <div class="erp-field sm:col-span-2"><label class="erp-label">Diagnosis</label><textarea name="diagnosis" class="erp-input" rows="2"></textarea></div>
+    <div class="erp-field sm:col-span-2"><label class="erp-label">Notes</label><textarea name="notes" class="erp-input" rows="2"></textarea></div>
+    <div class="erp-field sm:col-span-2"><label class="erp-label">Recommendations</label><textarea name="recommendations" class="erp-input" rows="2"></textarea></div>
+  </div>
+  {{ formFooter() }}
+</form>

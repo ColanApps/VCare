@@ -1,0 +1,68 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Cash Deposits') %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Record Cash Deposit</h3></div>
+    <form method="POST" action="/billing/cash-deposits" enctype="multipart/form-data" class="erp-card-body space-y-4">
+      <div>
+        <label class="erp-label">Customer *</label>
+        <select name="customerId" class="erp-select" required>
+          <option value="">Select customer</option>
+          {% for c in customers %}<option value="{{ c.id }}">{{ c.firstName }} {{ c.lastName }} ({{ c.uhid }})</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Amount (₹) *</label>
+        <input type="number" name="amount" class="erp-input" step="0.01" min="1" required>
+      </div>
+      <div>
+        <label class="erp-label">Payment Mode</label>
+        <select name="paymentMode" class="erp-select">
+          <option value="CASH">Cash</option>
+          <option value="BANK_TRANSFER">Bank Transfer</option>
+          <option value="CHEQUE">Cheque</option>
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Purpose</label>
+        <input type="text" name="purpose" class="erp-input" placeholder="Treatment deposit / advance">
+      </div>
+      <div>
+        <label class="erp-label">Deposit proof (slip / receipt)</label>
+        <input type="file" name="proof" class="erp-input text-sm" accept="image/*,.pdf">
+      </div>
+      <button type="submit" class="erp-btn-primary w-full">Record Deposit</button>
+    </form>
+  </div>
+
+  <div class="lg:col-span-2 erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Deposit Ledger</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+      <thead><tr><th>Deposit No</th><th>Customer</th><th>Branch</th><th>Amount</th><th>Mode</th><th>Purpose</th><th>Proof</th><th>Status</th><th>Date</th></tr></thead>
+      <tbody>
+        {% for d in deposits %}
+        <tr>
+          <td class="font-mono text-xs font-medium">{{ d.depositNo }}</td>
+          <td><a href="/customer/{{ d.customer.id }}" class="text-accent-600 hover:underline">{{ d.customer.firstName }} {{ d.customer.lastName }}</a></td>
+          <td class="text-sm">{{ d.branch.name }}</td>
+          <td class="font-medium">{{ d.amount | currency }}</td>
+          <td><span class="erp-badge-neutral">{{ d.paymentMode }}</span></td>
+          <td class="text-sm">{{ d.purpose or '—' }}</td>
+          <td class="text-xs">{% if d.proofPath %}<a href="{{ d.proofPath }}" class="text-accent-600" target="_blank">View</a>{% else %}—{% endif %}</td>
+          <td>{{ statusBadge(d.status) }}</td>
+          <td class="text-xs text-slate-500">{{ d.createdAt | date }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="erp-empty-cell">No cash deposits recorded</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

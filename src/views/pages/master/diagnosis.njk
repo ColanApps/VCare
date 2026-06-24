@@ -1,0 +1,32 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Diagnosis Master') %}
+{% endcall %}
+
+<div class="erp-card erp-table-card">
+  <div class="erp-card-header">
+    <h3 class="font-semibold text-slate-900">Diagnosis Codes</h3>
+    <span class="text-xs text-slate-500">{{ diagnoses | length }} entries</span>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr><th>Code</th><th>Name</th><th>Category</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        {% for d in diagnoses %}
+        <tr>
+          <td class="font-mono text-xs font-medium">{{ d.code }}</td>
+          <td>{{ d.name }}</td>
+          <td><span class="erp-badge-neutral">{{ d.category }}</span></td>
+          <td class="text-sm text-slate-600">{{ d.description or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="erp-empty-cell">No diagnoses configured</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

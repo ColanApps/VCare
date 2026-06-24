@@ -1,0 +1,55 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+{% block content %}
+{% call pageToolbar('Bill Details') %}
+  {{ modalTrigger('Create Bill', '/billing/create', 'Create Bill', 'full') }}
+{% endcall %}
+
+<form method="GET" action="/billing" class="erp-filter-bar">
+  <div class="erp-field flex-1 min-w-[200px]">
+    <label class="erp-label">Search</label>
+    <input type="text" name="q" value="{{ filters.q or '' }}" class="erp-input" placeholder="Bill no, customer, UHID…">
+  </div>
+  <div class="erp-field">
+    <label class="erp-label">Status</label>
+    <select name="status" class="erp-select w-auto min-w-[140px]">
+      <option value="">All</option>
+      <option value="PAID" {% if filters.status == 'PAID' %}selected{% endif %}>Paid</option>
+      <option value="PARTIAL" {% if filters.status == 'PARTIAL' %}selected{% endif %}>Partial</option>
+      <option value="PENDING" {% if filters.status == 'PENDING' %}selected{% endif %}>Pending</option>
+    </select>
+  </div>
+  <button type="submit" class="erp-btn-secondary">Filter</button>
+</form>
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr><th>Bill No</th><th>Date</th><th>Customer</th><th>Branch</th><th>Amount</th><th>Paid</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for b in bills %}
+        <tr>
+          <td class="font-mono text-xs">{{ b.billNo }}</td>
+          <td class="text-xs tabular-nums">{{ b.billDate | date }}</td>
+          <td class="font-medium">{{ b.customer.firstName }} {{ b.customer.lastName }}</td>
+          <td class="text-xs">{{ b.branch.name }}</td>
+          <td class="font-medium tabular-nums">{{ b.totalAmount | currency }}</td>
+          <td class="tabular-nums">{{ b.paidAmount | currency }}</td>
+          <td>{{ statusBadge(b.status) }}</td>
+          <td>
+            <a href="/billing/{{ b.id }}" class="text-accent-600 hover:text-accent-700 text-xs font-medium">View</a>
+            <a href="/billing/{{ b.id }}/pdf" class="text-slate-500 hover:text-accent-600 text-xs ml-2" target="_blank">PDF</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="erp-empty-cell">No bills found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "partials/pagination.njk" %}
+</div>
+{% endblock %}

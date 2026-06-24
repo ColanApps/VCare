@@ -1,0 +1,85 @@
+<form method="POST" action="/purchase/work-orders/create" class="erp-modal-form"
+  hx-post="/purchase/work-orders/create" hx-swap="none">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <div class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold text-sm">WO Details</h3></div>
+      <div class="erp-card-body space-y-4">
+        <div class="erp-field">
+          <label class="erp-label">Branch *</label>
+          <select name="branchId" class="erp-select" required>
+            {% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="erp-field">
+          <label class="erp-label">Vendor</label>
+          <select name="vendorId" class="erp-select">
+            <option value="">Internal / N/A</option>
+            {% for v in vendors %}<option value="{{ v.id }}">{{ v.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="erp-field">
+          <label class="erp-label">Description</label>
+          <input type="text" name="description" class="erp-input" required>
+        </div>
+        <div class="erp-field">
+          <label class="erp-label">Notes</label>
+          <textarea name="notes" class="erp-input" rows="2"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="lg:col-span-2 erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold text-sm">Line Items</h3></div>
+      <div class="erp-card-body">
+        <div class="flex flex-wrap gap-2 mb-4 p-3 bg-slate-50 rounded-lg">
+          <select id="product-select" class="erp-select text-sm flex-1">
+            <option value="">Custom line</option>
+            {% for p in products %}<option value="{{ p.id }}|{{ p.name }}|{{ p.costPrice }}">{{ p.name }}</option>{% endfor %}
+          </select>
+          <input type="text" id="item-desc" class="erp-input text-sm flex-1" placeholder="Description">
+          <input type="number" id="item-qty" class="erp-input w-16 text-sm" value="1" min="1">
+          <input type="number" id="item-cost" class="erp-input w-24 text-sm" placeholder="Cost" step="0.01">
+          <button type="button" onclick="addWoItem()" class="erp-btn-secondary text-sm">Add</button>
+        </div>
+        <table class="erp-table">
+          <thead><tr><th>Item</th><th>Qty</th><th>Unit Cost</th><th></th></tr></thead>
+          <tbody id="wo-items-body"><tr><td colspan="4" class="erp-empty-cell">Add items</td></tr></tbody>
+        </table>
+        <input type="hidden" name="items" id="wo-items-json" value="[]">
+        <button type="submit" class="erp-btn-primary mt-4">Create Work Order</button>
+      </div>
+    </div>
+  </div>
+</form>
+<script>
+const woItems = [];
+document.getElementById('product-select')?.addEventListener('change', function() {
+  if (!this.value) return;
+  const [, name, cost] = this.value.split('|');
+  document.getElementById('item-desc').value = name;
+  document.getElementById('item-cost').value = cost;
+});
+function addWoItem() {
+  const sel = document.getElementById('product-select').value;
+  const productId = sel ? sel.split('|')[0] : null;
+  woItems.push({
+    productId,
+    description: document.getElementById('item-desc').value,
+    quantity: parseInt(document.getElementById('item-qty').value, 10) || 1,
+    unitCost: parseFloat(document.getElementById('item-cost').value) || 0,
+  });
+  renderWoItems();
+}
+function removeWoItem(i) { woItems.splice(i, 1); renderWoItems(); }
+function renderWoItems() {
+  const tbody = document.getElementById('wo-items-body');
+  if (!woItems.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="erp-empty-cell">Add items</td></tr>';
+  } else {
+    tbody.innerHTML = woItems.map((item, i) =>
+      `<tr><td>${item.description}</td><td>${item.quantity}</td><td>₹${item.unitCost}</td><td><button type="button" onclick="removeWoItem(${i})" class="text-red-500 text-xs">Remove</button></td></tr>`
+    ).join('');
+  }
+  document.getElementById('wo-items-json').value = JSON.stringify(woItems);
+}
+</script>

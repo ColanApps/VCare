@@ -1,0 +1,86 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Advance Receipts') %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Record Advance</h3></div>
+    <form method="POST" action="/billing/advances" class="erp-card-body space-y-4">
+      <div>
+        <label class="erp-label">Customer *</label>
+        <select name="customerId" class="erp-select" required>
+          <option value="">Select customer</option>
+          {% for c in customers %}
+          <option value="{{ c.id }}">{{ c.firstName }} {{ c.lastName }} ({{ c.uhid }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Amount (₹) *</label>
+        <input type="number" name="amount" class="erp-input" step="0.01" min="1" required data-currency>
+      </div>
+      <div>
+        <label class="erp-label">Payment Mode</label>
+        <select name="paymentMode" class="erp-select">
+          <option value="CASH">Cash</option>
+          <option value="CARD">Card</option>
+          <option value="UPI">UPI</option>
+          <option value="BANK_TRANSFER">Bank Transfer</option>
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Notes</label>
+        <textarea name="notes" class="erp-input" rows="2" placeholder="Purpose / reference"></textarea>
+      </div>
+      <button type="submit" class="erp-btn-primary w-full">Record Advance</button>
+    </form>
+  </div>
+
+  <div class="lg:col-span-2 erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Advance Ledger</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+      <thead>
+        <tr><th>Receipt No</th><th>Customer</th><th>Branch</th><th>Amount</th><th>Used</th><th>Balance</th><th>Mode</th><th>Status</th><th>Date</th><th>Apply</th></tr>
+      </thead>
+      <tbody>
+        {% for a in advances %}
+        <tr>
+          <td class="font-mono text-xs font-medium">
+            <a href="/billing/advances/{{ a.id }}/pdf" class="text-accent-600 hover:underline" target="_blank">{{ a.receiptNo }}</a>
+          </td>
+          <td><a href="/customer/{{ a.customer.id }}" class="text-accent-600 hover:underline">{{ a.customer.firstName }} {{ a.customer.lastName }}</a></td>
+          <td class="text-sm">{{ a.branch.name }}</td>
+          <td class="font-medium">{{ a.amount | currency }}</td>
+          <td>{{ a.usedAmount | currency }}</td>
+          <td class="font-medium text-emerald-600">{{ a.balanceAmount | currency }}</td>
+          <td><span class="erp-badge-neutral">{{ a.paymentMode }}</span></td>
+          <td>{{ statusBadge(a.status) }}</td>
+          <td class="text-xs text-slate-500">{{ a.createdAt | date }}</td>
+          <td>
+            {% if a.status == 'ACTIVE' and a.balanceAmount > 0 %}
+            <form method="POST" action="/billing/advances/apply" class="flex gap-1 items-center">
+              <input type="hidden" name="advanceId" value="{{ a.id }}">
+              <select name="billId" class="erp-select text-xs w-32" required>
+                <option value="">Bill...</option>
+                {% for b in outstandingBills %}{% if b.customerId == a.customerId %}
+                <option value="{{ b.id }}">{{ b.billNo }} ({{ b.balanceAmount | currency }})</option>
+                {% endif %}{% endfor %}
+              </select>
+              <input type="number" name="amount" class="erp-input text-xs w-20" max="{{ a.balanceAmount }}" step="0.01" placeholder="Amt" required>
+              <button type="submit" class="erp-btn-secondary text-xs px-2 py-1">Apply</button>
+            </form>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="10" class="erp-empty-cell">No advance receipts recorded</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

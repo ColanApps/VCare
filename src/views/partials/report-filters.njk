@@ -1,0 +1,17 @@
+{% macro reportPeriodFilter(action, period, branches=null) %}
+<form method="GET" action="{{ action }}" class="erp-filter-bar mb-4">
+  <select name="month" class="erp-select text-sm">
+    {% for m in range(1, 13) %}
+    <option value="{{ m }}" {% if period.month == m %}selected{% endif %}>{{ ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m-1] }}</option>
+    {% endfor %}
+  </select>
+  <input type="number" name="year" value="{{ period.year }}" class="erp-input w-24 text-sm">
+  {% if branches %}
+  <select name="branchId" class="erp-select text-sm">
+    <option value="">All branches</option>
+    {% for b in branches %}<option value="{{ b.id }}" {% if filters.branchId == b.id %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+  </select>
+  {% endif %}
+  <button type="submit" class="erp-btn-secondary text-sm">Apply</button>
+</form>
+{% endmacro %}

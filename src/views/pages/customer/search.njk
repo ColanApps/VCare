@@ -1,0 +1,69 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+{% block content %}
+{% call pageToolbar('Search Customer', 'Find and register customers') %}
+  {{ modalTrigger('Register New', '/customer/register', 'Customer Registration', 'lg') }}
+{% endcall %}
+
+<form method="GET" action="/customer/search" class="erp-filter-bar">
+  <div class="erp-field md:col-span-2 flex-1 min-w-[200px]">
+    <label class="erp-label">Search</label>
+    <input type="text" name="q" value="{{ filters.q or '' }}" class="erp-input" placeholder="UHID, name, phone, email...">
+  </div>
+  <div class="erp-field">
+    <label class="erp-label">Category</label>
+    <select name="category" class="erp-select">
+      <option value="">All</option>
+      <option value="HAIR" {% if filters.category == 'HAIR' %}selected{% endif %}>Hair</option>
+      <option value="SKIN" {% if filters.category == 'SKIN' %}selected{% endif %}>Skin</option>
+    </select>
+  </div>
+  <div class="erp-field">
+    <label class="erp-label">Status</label>
+    <select name="status" class="erp-select">
+      <option value="">All</option>
+      <option value="ACTIVE" {% if filters.status == 'ACTIVE' %}selected{% endif %}>Active</option>
+      <option value="INACTIVE" {% if filters.status == 'INACTIVE' %}selected{% endif %}>Inactive</option>
+      <option value="DISCONTINUED" {% if filters.status == 'DISCONTINUED' %}selected{% endif %}>Discontinued</option>
+    </select>
+  </div>
+  <button type="submit" class="erp-btn-secondary">Search</button>
+</form>
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>UHID</th>
+          <th>Name</th>
+          <th>Phone</th>
+          <th>Category</th>
+          <th>Branch</th>
+          <th>Status</th>
+          <th>Registered</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in customers %}
+        <tr>
+          <td class="font-mono text-xs font-medium">{{ c.uhid }}</td>
+          <td>{{ c.firstName }} {{ c.lastName }}</td>
+          <td>{{ c.phone }}</td>
+          <td><span class="erp-badge-neutral">{{ c.category }}</span></td>
+          <td>{{ c.branch.name }}</td>
+          <td>{{ statusBadge(c.status) }}</td>
+          <td class="text-xs text-slate-500">{{ c.registeredAt | date }}</td>
+          <td><a href="/customer/{{ c.id }}" class="text-accent-600 hover:underline text-xs">View</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="erp-empty-cell">No customers found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "partials/pagination.njk" %}
+</div>
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Service B2B Invoicing', Tax invoices for corporate treatment / service buyers) %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2">
+    <form method="POST" action="/billing/service-b2b" id="svc-b2b-form">
+      <div class="erp-card mb-6 erp-table-card">
+        <div class="erp-card-header"><h3 class="font-semibold">Invoice Details</h3></div>
+        <div class="erp-card-body erp-form-grid">
+          <div>
+            <label class="erp-label">Corporate Buyer *</label>
+            <select name="customerId" class="erp-select" required id="corp-select">
+              <option value="">Select corporate account</option>
+              {% for c in corporateCustomers %}
+              <option value="{{ c.id }}" data-gstin="{{ c.gstin or '' }}">{{ c.companyName or c.firstName }} ({{ c.uhid }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="erp-label">Buyer GSTIN</label>
+            <input type="text" name="buyerGstin" id="buyer-gstin" class="erp-input font-mono">
+          </div>
+          <div>
+            <label class="erp-label">PO / Reference No</label>
+            <input type="text" name="poReference" class="erp-input">
+          </div>
+          <div>
+            <label class="erp-label">Payment Mode</label>
+            <select name="paymentMode" class="erp-select">
+              <option value="BANK_TRANSFER">Bank Transfer</option>
+              <option value="CHEQUE">Cheque</option>
+              <option value="CREDIT">Credit</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="erp-card erp-table-card">
+        <div class="erp-card-header"><h3 class="font-semibold">Services / Treatments</h3></div>
+        <div class="erp-card-body">
+          <div class="flex flex-wrap gap-2 mb-4 p-3 bg-slate-50 rounded-lg">
+            <select id="treatment-select" class="erp-select text-sm flex-1 min-w-[200px]">
+              {% for t in treatments %}
+              <option value="{{ t.id }}|{{ t.code }}|{{ t.name }}|{{ t.basePrice }}">{{ t.name }} — {{ t.basePrice | currency }}</option>
+              {% endfor %}
+            </select>
+            <input type="number" id="item-qty" class="erp-input w-20 text-sm" value="1" min="1">
+            <input type="number" id="item-price" class="erp-input w-24 text-sm" placeholder="Rate" step="0.01">
+            <button type="button" onclick="addSvcItem()" class="erp-btn-secondary text-sm">Add</button>
+          </div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+            <thead><tr><th>Service</th><th>Code</th><th>Qty</th><th>Rate</th><th>Total</th><th></th></tr></thead>
+            <tbody id="svc-items-body"><tr><td colspan="6" class="erp-empty-cell">Add line items</td></tr></tbody>
+          </table>
+          <input type="hidden" name="items" id="svc-items-json" value="[]">
+        </div>
+      </div>
+
+      <div class="erp-card mt-6">
+        <div class="erp-card-body flex items-center justify-between">
+          <div><div class="text-sm text-slate-500">Invoice Total (incl. tax)</div><div class="text-2xl font-semibold" id="svc-total">₹0</div></div>
+          <div class="flex gap-4 items-end">
+            <div><label class="erp-label">Paid Now</label><input type="number" name="paidAmount" class="erp-input w-32" step="0.01" value="0"></div>
+            <button type="submit" class="erp-btn-primary">Generate B2B Invoice</button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="erp-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Recent Service B2B</h3></div>
+    <div class="divide-y divide-surface-border">
+      {% for b in recentBills %}
+      <a href="/billing/{{ b.id }}" class="block p-4 hover:bg-slate-50">
+        <div class="flex justify-between"><span class="font-mono text-xs">{{ b.billNo }}</span>{{ statusBadge(b.status) }}</div>
+        <div class="text-sm">{{ b.customer.companyName or b.customer.firstName }}</div>
+        <div class="flex justify-between items-center">
+          <span class="text-sm font-medium">{{ b.totalAmount | currency }}</span>
+          <a href="/billing/{{ b.id }}/pdf" class="text-xs text-accent-600" target="_blank" onclick="event.stopPropagation()">PDF</a>
+        </div>
+      </a>
+      {% else %}
+      <div class="p-6 text-center text-slate-400">No service B2B invoices yet</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const svcItems = [];
+document.getElementById('corp-select')?.addEventListener('change', function() {
+  document.getElementById('buyer-gstin').value = this.selectedOptions[0]?.dataset.gstin || '';
+});
+function addSvcItem() {
+  const [treatmentId, code, name, price] = document.getElementById('treatment-select').value.split('|');
+  const qty = parseInt(document.getElementById('item-qty').value, 10) || 1;
+  const customPrice = parseFloat(document.getElementById('item-price').value);
+  const unitPrice = !isNaN(customPrice) && customPrice > 0 ? customPrice : parseFloat(price);
+  svcItems.push({ treatmentId, itemType: 'TREATMENT', itemCode: code, itemName: name, quantity: qty, unitPrice });
+  renderSvcItems();
+}
+function removeSvcItem(i) { svcItems.splice(i, 1); renderSvcItems(); }
+function renderSvcItems() {
+  const tbody = document.getElementById('svc-items-body');
+  let total = 0;
+  if (!svcItems.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="erp-empty-cell">Add line items</td></tr>';
+  } else {
+    tbody.innerHTML = svcItems.map((item, i) => {
+      const line = item.quantity * item.unitPrice * 1.18;
+      total += line;
+      return `<tr><td>${item.itemName}</td><td class="font-mono text-xs">${item.itemCode}</td><td>${item.quantity}</td><td>₹${item.unitPrice}</td><td>₹${line.toFixed(2)}</td><td><button type="button" onclick="removeSvcItem(${i})" class="text-red-500 text-xs">Remove</button></td></tr>`;
+    }).join('');
+  }
+  document.getElementById('svc-items-json').value = JSON.stringify(svcItems);
+  document.getElementById('svc-total').textContent = '₹' + total.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "layouts/main.njk" %}
+
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+
+{% block content %}
+
+{% call pageToolbar('Customer Visit Details', 'Treatment visit records and session notes') %}
+
+  {{ modalTrigger('Record Visit', '/customer/treatment/visits/form', 'New Treatment Visit', 'lg') }}
+
+{% endcall %}
+
+
+
+<div class="erp-card erp-table-card">
+
+  <div class="overflow-x-auto">
+
+    <table class="erp-table">
+
+      <thead>
+
+        <tr><th>Visit No</th><th>Date</th><th>Customer</th><th>Branch</th><th>Type</th><th>Session</th><th>Feedback</th><th>Notes</th></tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for v in visits %}
+
+        <tr>
+
+          <td class="font-mono text-xs">{{ v.visitNo }}</td>
+
+          <td class="text-xs whitespace-nowrap">{{ v.visitedAt | datetime }}</td>
+
+          <td>
+
+            <a href="/customer/treatment/{{ v.customer.id }}" class="font-medium text-accent-600 hover:underline">{{ v.customer.firstName }} {{ v.customer.lastName }}</a>
+
+            <div class="text-[10px] text-slate-400">{{ v.customer.uhid }}</div>
+
+          </td>
+
+          <td class="text-sm">{{ v.branch.name }}</td>
+
+          <td><span class="erp-badge-neutral">{{ v.visitType }}</span></td>
+
+          <td>{{ v.sessionNo }}</td>
+
+          <td>{% if v.feedback %}<span class="text-amber-600">★ {{ v.feedback.rating or '—' }}</span>{% else %}<span class="text-slate-400">—</span>{% endif %}</td>
+
+          <td class="text-sm text-slate-600 max-w-xs truncate">{{ v.treatmentNotes or '—' }}</td>
+
+        </tr>
+
+        {% else %}
+
+        <tr><td colspan="8" class="erp-empty-cell">No visits recorded</td></tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+</div>
+</div>
+
+{% endblock %}
+

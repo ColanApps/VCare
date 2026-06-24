@@ -1,0 +1,99 @@
+{% extends "layouts/main.njk" %}
+
+{% from "macros/components.njk" import statusBadge %}
+
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+
+{% block content %}
+
+{% call pageToolbar('Sales Orders', 'Customer sales orders and invoicing') %}
+
+  {{ modalTrigger('Create Order', '/sales/orders/create', 'Create Sales Order', 'xl') }}
+
+{% endcall %}
+
+
+
+<div class="erp-card erp-table-card overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+
+    <thead><tr><th>Order No</th><th>Customer</th><th>Branch</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+
+    <tbody>
+
+      {% for o in orders %}
+
+      <tr>
+
+        <td class="font-mono text-xs font-medium">{{ o.orderNo }}</td>
+
+        <td>{{ o.customer.firstName }} {{ o.customer.lastName }}</td>
+
+        <td class="text-sm">{{ o.branch.name }}</td>
+
+        <td>
+
+          <ul class="text-xs space-y-0.5">
+
+            {% for item in o.items %}<li>{{ item.product.name }} × {{ item.quantity }}</li>{% endfor %}
+
+          </ul>
+
+        </td>
+
+        <td class="font-medium">{{ o.totalAmount | currency }}</td>
+
+        <td>{{ statusBadge(o.status) }}</td>
+
+        <td class="text-xs text-slate-500">{{ o.createdAt | date }}</td>
+
+        <td class="space-y-1">
+
+          {% if o.status != 'INVOICED' %}
+
+          <form method="POST" action="/sales/orders/{{ o.id }}/challan" class="inline">
+
+            <input type="hidden" name="notes" value="">
+
+            <button type="submit" class="erp-btn-secondary text-xs py-1">Issue DC</button>
+
+          </form>
+
+          <form method="POST" action="/sales/orders/{{ o.id }}/invoice" class="inline flex gap-1 items-center mt-1">
+
+            {% if 'billing.payments' in user.permissions or '*' in user.permissions %}
+            <input type="number" name="paidAmount" class="erp-input w-20 text-xs" step="0.01" placeholder="Paid" value="0">
+            <select name="paymentMode" class="erp-select text-xs"><option value="CASH">Cash</option><option value="UPI">UPI</option><option value="BANK_TRANSFER">Bank</option></select>
+            {% else %}
+            <input type="hidden" name="paidAmount" value="0">
+            {% endif %}
+
+            <button type="submit" class="erp-btn-primary text-xs py-1">Invoice</button>
+
+          </form>
+
+          {% else %}
+
+          <span class="text-xs text-slate-400">Invoiced</span>
+
+          {% endif %}
+
+        </td>
+
+      </tr>
+
+      {% else %}
+
+      <tr><td colspan="8" class="erp-empty-cell">No sales orders</td></tr>
+
+      {% endfor %}
+
+    </tbody>
+
+  </table>
+  </div>
+</div>
+
+{% endblock %}
+

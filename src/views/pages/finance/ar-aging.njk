@@ -1,0 +1,59 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('AR Aging', aging.summary.count ~ ' outstanding bills · ' ~ (aging.summary.total | currency) ~ ' total AR') %}
+  <a href="/finance" class="erp-btn-secondary text-sm">Finance Hub</a>
+{% endcall %}
+
+<div class="erp-kpi-grid erp-kpi-grid-auto mb-8" style="grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));">
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">0–30 days</div>
+    <div class="erp-kpi-value mt-1">{{ aging.summary.current | currency }}</div>
+  </div>
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">31–60 days</div>
+    <div class="erp-kpi-value mt-1">{{ aging.summary.d30 | currency }}</div>
+  </div>
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">61–90 days</div>
+    <div class="erp-kpi-value mt-1">{{ aging.summary.d60 | currency }}</div>
+  </div>
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">91–120 days</div>
+    <div class="erp-kpi-value mt-1">{{ aging.summary.d90 | currency }}</div>
+  </div>
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">120+ days</div>
+    <div class="erp-kpi-value mt-1 text-red-600">{{ aging.summary.d90plus | currency }}</div>
+  </div>
+</div>
+
+<div class="erp-card erp-table-card">
+  <div class="erp-card-header">
+    <h3 class="font-semibold text-slate-900">Outstanding Bills</h3>
+    <span class="text-xs text-slate-500">{{ aging.summary.count }} records</span>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr><th>Bill</th><th>Customer</th><th>Branch</th><th>Bill Date</th><th>Age (days)</th><th>Balance</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for b in aging.bills %}
+        <tr>
+          <td><a href="/billing/{{ b.id }}" class="text-accent-600 font-mono text-xs hover:underline">{{ b.billNo }}</a></td>
+          <td><a href="/dashboard/journey/{{ b.customerId }}" class="hover:text-accent-600">{{ b.customer.firstName }} {{ b.customer.lastName }}</a></td>
+          <td>{{ b.branch.name }}</td>
+          <td>{{ b.billDate | date }}</td>
+          <td><span class="{% if b.days > 90 %}text-red-600 font-medium{% elif b.days > 60 %}text-amber-600{% endif %}">{{ b.days }}</span></td>
+          <td class="font-medium">{{ b.balanceAmount | currency }}</td>
+          <td><a href="/billing/{{ b.id }}" class="erp-btn-primary text-xs px-3 py-1.5">Collect</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="erp-empty-cell">No outstanding bills — AR is clear.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/admin/users" class="erp-modal-form"
+  hx-post="/admin/users" hx-swap="none">
+  <div class="erp-form-grid">
+    <div class="erp-field">
+      <label class="erp-label">Employee ID</label>
+      <input type="text" name="employeeId" class="erp-input" required>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Email</label>
+      <input type="email" name="email" class="erp-input" required>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">First Name</label>
+      <input type="text" name="firstName" class="erp-input" required>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Last Name</label>
+      <input type="text" name="lastName" class="erp-input" required>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Phone</label>
+      <input type="tel" name="phone" class="erp-input">
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Password</label>
+      <input type="password" name="password" class="erp-input" placeholder="Default: VCare@123">
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Role</label>
+      <select name="roleId" class="erp-select" required>
+        <option value="">Select role</option>
+        {% for role in roles %}
+        <option value="{{ role.id }}">{{ role.name }} (L{{ role.level }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Designation</label>
+      <select name="designationId" class="erp-select">
+        <option value="">None</option>
+        {% for d in designations %}
+        <option value="{{ d.id }}">{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Branch</label>
+      <select name="branchId" class="erp-select">
+        <option value="">Head Office</option>
+        {% for branch in branches %}
+        <option value="{{ branch.id }}">{{ branch.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  {{ formFooter() }}
+</form>

@@ -1,0 +1,14 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Create Bill') %}
+  <a href="/billing" class="erp-btn-secondary">Back to Bills</a>
+{% endcall %}
+
+<div class="erp-modal-page">
+  <div class="erp-modal-panel erp-modal-full erp-modal-embedded">
+    <div class="erp-modal-header"><h2 class="erp-modal-title">Create Bill</h2></div>
+    <div class="erp-modal-body">{% include "partials/forms/billing-create.njk" %}</div>
+  </div>
+</div>
+{% endblock %}

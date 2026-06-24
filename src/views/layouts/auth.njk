@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }} · {{ appName }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/app.css">
+  <script defer src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js"></script>
+</head>
+<body class="h-full antialiased" x-data="{ showPassword: false }">
+  <div class="erp-auth-page">
+    <aside class="erp-auth-visual" aria-hidden="true">
+      <img
+        src="/img/login-hero.png"
+        alt=""
+        class="erp-auth-visual-img"
+        width="1200"
+        height="900"
+        loading="eager"
+        decoding="async"
+      >
+      <div class="erp-auth-visual-overlay"></div>
+      <div class="erp-auth-visual-content">
+        <p class="erp-auth-visual-eyebrow">Enterprise clinic platform</p>
+        <h1 class="erp-auth-visual-title">Care operations, unified in one place.</h1>
+        <p class="erp-auth-visual-sub">Appointments, clinical workflows, billing, inventory, and finance — orchestrated for every role in your clinic network.</p>
+        <div class="erp-auth-visual-stats">
+          <span class="erp-auth-visual-stat">Multi-role workflows</span>
+          <span class="erp-auth-visual-stat">Real-time task queue</span>
+          <span class="erp-auth-visual-stat">Branch-wide control</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="erp-auth-panel">
+      <div class="erp-auth-panel-inner">
+        <div class="erp-auth-mobile-hero">
+          <img src="/img/login-hero.png" alt="" class="absolute inset-0 w-full h-full object-cover">
+          <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-slate-900/20"></div>
+        </div>
+
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+
+  {% if error %}
+  <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-slide-up" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 6000)">
+    <div class="erp-toast erp-toast-error">
+      <span class="erp-toast-icon erp-toast-icon-error">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </span>
+      <span class="text-sm font-medium text-slate-700">{{ error }}</span>
+      <button type="button" @click="show = false" class="erp-toast-close" aria-label="Dismiss">&times;</button>
+      <span class="erp-toast-bar erp-toast-bar-error"></span>
+    </div>
+  </div>
+  {% endif %}
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

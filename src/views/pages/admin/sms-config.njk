@@ -1,0 +1,70 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <div class="erp-card">
+    <div class="erp-card-header">
+      <h3 class="font-semibold text-slate-900">SMS Provider Settings</h3>
+      {% if config and config.isActive %}<span class="erp-badge-success">Active</span>{% else %}<span class="erp-badge-warning">Inactive</span>{% endif %}
+    </div>
+    <form method="POST" action="/admin/sms-config" class="erp-card-body">
+      <div class="space-y-4">
+        <div>
+          <label class="erp-label">Provider</label>
+          <select name="provider" class="erp-select" required>
+            <option value="MSG91" {% if config and config.provider == 'MSG91' %}selected{% endif %}>MSG91</option>
+            <option value="TWILIO" {% if config and config.provider == 'TWILIO' %}selected{% endif %}>Twilio</option>
+            <option value="TEXTLOCAL" {% if config and config.provider == 'TEXTLOCAL' %}selected{% endif %}>TextLocal</option>
+          </select>
+        </div>
+        <div>
+          <label class="erp-label">API Key</label>
+          <input type="password" name="apiKey" class="erp-input" value="{{ config.apiKey or '' }}">
+        </div>
+        <div>
+          <label class="erp-label">Sender ID</label>
+          <input type="text" name="senderId" class="erp-input" value="{{ config.senderId or '' }}" placeholder="VCARE" maxlength="6">
+        </div>
+        <div>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="isActive" class="rounded border-slate-300" {% if config and config.isActive %}checked{% endif %}>
+            <span class="erp-label mb-0">Enable SMS notifications</span>
+          </label>
+        </div>
+        <button type="submit" class="erp-btn-primary">Save Configuration</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="erp-card">
+    <div class="erp-card-header">
+      <h3 class="font-semibold text-slate-900">Recent Notifications</h3>
+      <span class="text-xs text-slate-500">Last 20</span>
+    </div>
+    <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
+      <table class="erp-table text-xs">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Type</th>
+            <th>Recipient</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for n in notifications %}
+          <tr>
+            <td class="whitespace-nowrap">{{ n.createdAt | datetime }}</td>
+            <td><span class="erp-badge-neutral">{{ n.type }}</span></td>
+            <td class="font-mono">{{ n.recipient }}</td>
+            <td>{{ statusBadge(n.status) }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="text-center text-slate-400 py-8">No notifications sent yet</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

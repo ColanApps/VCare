@@ -1,0 +1,37 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% from "partials/report-filters.njk" import reportPeriodFilter %}
+{% block content %}
+{% call pageToolbar('Pending Advance Report') %}
+{% endcall %}
+{{ reportPeriodFilter('/reports/pending-advances', period) }}
+<p class="text-sm text-slate-500 mb-6">{{ period.from | date }} — {{ period.to | date }}</p>
+
+<div class="erp-kpi mb-6 inline-block">
+  <div class="erp-kpi-label">Total Pending Balance</div>
+  <div class="erp-kpi-value mt-1">{{ total | currency }}</div>
+</div>
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+    <thead><tr><th>Receipt No</th><th>Customer</th><th>Branch</th><th>Original</th><th>Balance</th><th>Date</th></tr></thead>
+    <tbody>
+      {% for a in advances %}
+      <tr>
+        <td class="font-mono text-xs">{{ a.receiptNo }}</td>
+        <td>{{ a.customer.firstName }} {{ a.customer.lastName }}</td>
+        <td>{{ a.branch.name }}</td>
+        <td>{{ a.amount | currency }}</td>
+        <td class="font-medium text-amber-600">{{ a.balanceAmount | currency }}</td>
+        <td class="text-xs">{{ a.createdAt | date }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="erp-empty-cell">No pending advances in period</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

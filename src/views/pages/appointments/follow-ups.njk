@@ -1,0 +1,96 @@
+{% extends "layouts/main.njk" %}
+
+{% from "macros/components.njk" import statusBadge %}
+
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+
+{% block content %}
+
+{% call pageToolbar('Customer Follow Ups', 'Scheduled follow-up tasks and outcomes') %}
+
+  {{ modalTrigger('Create Follow Up', '/appointments/follow-ups/form', 'New Follow Up', 'md') }}
+
+{% endcall %}
+
+
+
+<div class="erp-card erp-table-card">
+
+  <div class="overflow-x-auto">
+
+    <table class="erp-table">
+
+      <thead>
+
+        <tr>
+
+          <th>Customer</th>
+
+          <th>Type</th>
+
+          <th>Scheduled</th>
+
+          <th>Feedback</th>
+
+          <th>Status</th>
+
+          <th>Action</th>
+
+        </tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for fu in followUps %}
+
+        <tr>
+
+          <td>
+
+            <a href="/customer/{{ fu.customer.id }}" class="hover:underline font-medium">{{ fu.customer.firstName }} {{ fu.customer.lastName }}</a>
+
+            <div class="text-[10px] text-slate-400">{{ fu.customer.uhid }}</div>
+
+          </td>
+
+          <td><span class="erp-badge-neutral">{{ fu.type | replace('_', ' ') }}</span></td>
+
+          <td class="text-xs">{% if fu.scheduledAt %}{{ fu.scheduledAt | datetime }}{% else %}—{% endif %}</td>
+
+          <td class="text-sm text-slate-600 max-w-xs truncate">{{ fu.feedback or '—' }}</td>
+
+          <td>{{ statusBadge(fu.status) }}</td>
+
+          <td>
+
+            {% if fu.status == 'PENDING' %}
+
+            <form method="POST" action="/appointments/follow-ups/{{ fu.id }}/complete" class="flex gap-1">
+
+              <input type="text" name="feedback" class="erp-input text-xs w-32" placeholder="Outcome">
+
+              <button type="submit" class="erp-btn-secondary text-xs px-2">Complete</button>
+
+            </form>
+
+            {% else %}—{% endif %}
+
+          </td>
+
+        </tr>
+
+        {% else %}
+
+        <tr><td colspan="6" class="erp-empty-cell">No follow ups recorded</td></tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+</div>
+</div>
+
+{% endblock %}
+

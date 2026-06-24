@@ -1,0 +1,44 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Asset GRN') %}
+{% endcall %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Receive Asset</h3></div>
+    <form method="POST" action="/purchase/asset-grn" class="erp-card-body space-y-4">
+      <div><label class="erp-label">Approved Asset PO *</label>
+        <select name="apoId" class="erp-select" required>
+          <option value="">Select APO</option>
+          {% for apo in approvedAPOs %}
+          <option value="{{ apo.id }}">{{ apo.apoNo }} — {{ apo.totalAmount | currency }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div><label class="erp-label">Vendor</label>
+        <select name="vendorId" class="erp-select"><option value="">From PO</option>{% for apo in approvedAPOs %}{% if apo.vendor %}<option value="{{ apo.vendor.id }}">{{ apo.vendor.name }}</option>{% endif %}{% endfor %}</select>
+      </div>
+      <div><label class="erp-label">Receiving Branch *</label>
+        <select name="branchId" class="erp-select" required>{% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select>
+      </div>
+      <div><label class="erp-label">Notes</label><textarea name="notes" class="erp-input" rows="2"></textarea></div>
+      <button type="submit" class="erp-btn-primary w-full">Create Asset GRN</button>
+    </form>
+  </div>
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Open Asset GRNs</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table text-sm">
+      <thead><tr><th>GRN No</th><th>PO</th><th>Status</th><th>Date</th></tr></thead>
+      <tbody>
+        {% for g in grns %}
+        <tr><td class="font-mono text-xs">{{ g.grnNo }}</td><td>{{ g.po.poNo if g.po else '—' }}</td><td>{{ statusBadge(g.status) }}</td><td class="text-xs">{{ g.createdAt | date }}</td></tr>
+        {% else %}
+        <tr><td colspan="4" class="erp-empty-cell">No open asset GRNs</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

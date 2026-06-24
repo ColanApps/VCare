@@ -1,0 +1,27 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/master/branches" class="erp-modal-form"
+  hx-post="/master/branches" hx-swap="none">
+  <div class="erp-form-grid">
+    <div class="erp-field"><label class="erp-label">Code</label><input type="text" name="code" class="erp-input" required></div>
+    <div class="erp-field"><label class="erp-label">Name</label><input type="text" name="name" class="erp-input" required></div>
+    <div class="erp-field">
+      <label class="erp-label">Type</label>
+      <select name="type" class="erp-select">
+        <option value="HAIR">Hair</option><option value="SKIN">Skin</option><option value="PRP">PRP</option>
+        <option value="AESTHETICS">Aesthetics</option><option value="MIXED">Mixed</option>
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Zone</label>
+      <select name="zoneId" class="erp-select"><option value="">None</option>{% for z in zones %}<option value="{{ z.id }}">{{ z.name }}</option>{% endfor %}</select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">City</label>
+      <select name="cityId" class="erp-select"><option value="">None</option>{% for c in cities %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+    </div>
+    <div class="erp-field"><label class="erp-label">Phone</label><input type="tel" name="phone" class="erp-input"></div>
+    <div class="erp-field"><label class="erp-label">Email</label><input type="email" name="email" class="erp-input"></div>
+    <div class="erp-field sm:col-span-2"><label class="erp-label">Address</label><textarea name="address" class="erp-input" rows="2"></textarea></div>
+  </div>
+  {{ formFooter() }}
+</form>

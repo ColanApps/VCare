@@ -1,0 +1,81 @@
+{# Page toolbar with title and action slot #}
+{% macro pageToolbar(title, subtitle='') %}
+<div class="erp-page-toolbar">
+  <div>
+    <h1 class="erp-page-title">{{ title }}</h1>
+    {% if subtitle %}<p class="erp-page-subtitle">{{ subtitle }}</p>{% endif %}
+  </div>
+  <div class="erp-page-actions">{{ caller() }}</div>
+</div>
+{% endmacro %}
+
+{# Opens global modal and loads form via HTMX #}
+{% macro modalTrigger(label, url, title, size='md', style='primary') %}
+<button type="button"
+  class="{% if style == 'secondary' %}erp-btn-secondary{% else %}erp-btn-primary{% endif %}"
+  hx-get="{{ url }}"
+  hx-target="#erp-modal-body"
+  hx-swap="innerHTML"
+  @click="$dispatch('erp-open-modal', { title: '{{ title }}', size: '{{ size }}' })">
+  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+  {{ label }}
+</button>
+{% endmacro %}
+
+{% macro formFooter(cancelUrl='') %}
+<div class="erp-form-footer">
+  {% if cancelUrl %}
+  <a href="{{ cancelUrl }}" class="erp-btn-secondary">Cancel</a>
+  {% else %}
+  <button type="button" class="erp-btn-secondary" @click="$dispatch('erp-close-modal')">Cancel</button>
+  {% endif %}
+  <button type="submit" class="erp-btn-primary">
+    <span class="htmx-hide">Save</span>
+    <span class="htmx-indicator erp-btn-spinner">Saving…</span>
+  </button>
+</div>
+{% endmacro %}
+
+{% macro emptyState(message='No records found', colspan=1) %}
+<tr><td colspan="{{ colspan }}" class="erp-empty-cell">{{ message }}</td></tr>
+{% endmacro %}
+
+{% macro filterBar() %}
+<div class="erp-filter-bar">
+  {{ caller() }}
+</div>
+{% endmacro %}
+
+{% macro hubTile(url, title, description, badge='') %}
+<a href="{{ url }}" class="erp-hub-tile group">
+  <div class="erp-hub-tile-icon">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+    </svg>
+  </div>
+  <div class="erp-hub-tile-title">{{ title }}{% if badge %} <span class="erp-badge-warning text-[10px] align-middle ml-1">{{ badge }}</span>{% endif %}</div>
+  <p class="erp-hub-tile-desc">{{ description }}</p>
+  <span class="erp-hub-tile-footer">Open <span class="group-hover:translate-x-0.5 transition-transform">→</span></span>
+</a>
+{% endmacro %}
+
+{% macro taskPriorityBadge(priority) %}
+{% if priority == 'urgent' %}<span class="erp-badge-danger text-[10px]">Urgent</span>
+{% elif priority == 'high' %}<span class="erp-badge-warning text-[10px]">High</span>
+{% elif priority == 'medium' %}<span class="erp-badge-info text-[10px]">Medium</span>
+{% elif priority == 'low' %}<span class="erp-badge-neutral text-[10px]">Low</span>
+{% endif %}
+{% endmacro %}
+
+{% macro taskRow(task) %}
+<a href="{{ task.url }}" class="erp-task-row erp-task-row-priority-{{ task.priority or 'low' }} group">
+  <div class="erp-task-row-body">
+    <div class="flex flex-wrap items-center gap-2">
+      {{ taskPriorityBadge(task.priority) }}
+      <span class="erp-task-row-title group-hover:text-accent-700 transition-colors">{{ task.title }}</span>
+    </div>
+    {% if task.description %}<p class="erp-task-row-desc">{{ task.description }}</p>{% endif %}
+  </div>
+  <span class="erp-task-row-action">{{ task.actionLabel or 'Open' }} →</span>
+</a>
+{% endmacro %}

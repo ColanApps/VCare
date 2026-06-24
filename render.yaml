@@ -1,0 +1,27 @@
+# Render Blueprint — Web Service + external MySQL DATABASE_URL
+# Link a MySQL database (Render, PlanetScale, Railway, etc.) and set DATABASE_URL on the web service.
+
+services:
+  - type: web
+    name: vcare-erp
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    releaseCommand: npm run db:push && npm run db:sync-permissions
+    startCommand: npm start
+    healthCheckPath: /auth/login
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_STORE
+        value: mysql
+      - key: DATABASE_URL
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: UPLOAD_DIR
+        value: /var/data/uploads
+    disk:
+      name: vcare-uploads
+      mountPath: /var/data/uploads
+      sizeGB: 1

@@ -1,0 +1,18 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+{% block content %}
+{% call pageToolbar(title, 'Quick appointment booking') %}
+  <a href="/appointments" class="erp-btn-secondary">View Schedule</a>
+{% endcall %}
+
+<div class="erp-modal-page">
+  <div class="erp-modal-panel erp-modal-lg erp-modal-embedded">
+    <div class="erp-modal-header">
+      <h2 class="erp-modal-title">Create Appointment</h2>
+    </div>
+    <div class="erp-modal-body">
+      {% include "partials/forms/fix-appointment.njk" %}
+    </div>
+  </div>
+</div>
+{% endblock %}

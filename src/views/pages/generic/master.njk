@@ -1,0 +1,24 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+{% block content %}
+{% call pageToolbar(title) %}
+  {% if screen.id == 'ops-reimbursement' %}
+  {{ modalTrigger('Add Record', '/operations/iou/reimbursement/form', 'New Reimbursement Claim', 'lg') }}
+  {% else %}
+  {{ modalTrigger('Add Record', screen.path + '/form', 'New Entry', 'lg') }}
+  {% endif %}
+{% endcall %}
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>{% for field in fields %}<th>{{ field }}</th>{% endfor %}<th>Created</th><th></th></tr>
+      </thead>
+      <tbody id="master-table-body">
+        {% include "partials/master-table-rows.njk" %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

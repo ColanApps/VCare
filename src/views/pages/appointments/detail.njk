@@ -1,0 +1,44 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+<p class="mb-3"><a href="/appointments" class="text-sm text-slate-500 hover:text-slate-700">← Back to scheduling</a></p>
+{% call pageToolbar(appointment.appointmentNo, appointment.scheduledAt | datetime ~ ' · ' ~ appointment.branch.name) %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2 space-y-6">
+    <div class="erp-card">
+      <div class="erp-card-header flex justify-between items-center">
+        <h3 class="font-semibold">Appointment Details</h3>
+        {{ statusBadge(appointment.status) }}
+      </div>
+      <div class="erp-card-body grid grid-cols-2 gap-4 text-sm">
+        <div><span class="text-slate-500">Customer</span><p class="font-medium"><a href="/customer/{{ appointment.customer.id }}" class="text-blue-600 hover:underline">{{ appointment.customer.firstName }} {{ appointment.customer.lastName }}</a></p></div>
+        <div><span class="text-slate-500">Phone</span><p>{{ appointment.customer.phone }}</p></div>
+        <div><span class="text-slate-500">Consultant</span><p>{% if appointment.consultant %}{{ appointment.consultant.firstName }} {{ appointment.consultant.lastName }}{% else %}—{% endif %}</p></div>
+        <div><span class="text-slate-500">Type</span><p>{{ appointment.type }} · {{ appointment.category }}</p></div>
+        <div><span class="text-slate-500">Duration</span><p>{{ appointment.duration }} min</p></div>
+        <div><span class="text-slate-500">Source</span><p>{{ appointment.source }}{% if appointment.leadSource %} · {{ appointment.leadSource }}{% endif %}</p></div>
+        {% if appointment.notes %}
+        <div class="col-span-2"><span class="text-slate-500">Notes</span><p>{{ appointment.notes }}</p></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="erp-card h-fit">
+    <div class="erp-card-header"><h3 class="font-semibold">Update Status</h3></div>
+    <div class="erp-card-body space-y-2">
+      {% for s in ['CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW'] %}
+      {% if appointment.status != s %}
+      <form method="POST" action="/appointments/{{ appointment.id }}/status" class="w-full">
+        <input type="hidden" name="status" value="{{ s }}">
+        <button type="submit" class="erp-btn-secondary w-full text-sm {% if s == 'CANCELLED' or s == 'NO_SHOW' %}text-red-600{% endif %}">Mark {{ s | replace('_', ' ') }}</button>
+      </form>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

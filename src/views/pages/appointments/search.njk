@@ -1,0 +1,63 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Search Appointments') %}
+{% endcall %}
+
+<form method="GET" action="/appointments/search" class="erp-filter-bar mb-6">
+  <div class="erp-field flex-1 min-w-[200px]">
+    <label class="erp-label">Search</label>
+    <input type="text" name="q" value="{{ filters.q or '' }}" class="erp-input" placeholder="Appointment no, customer name, phone...">
+  </div>
+  <div class="erp-field">
+    <label class="erp-label">Status</label>
+    <select name="status" class="erp-select">
+      <option value="">All</option>
+      <option value="SCHEDULED" {% if filters.status == 'SCHEDULED' %}selected{% endif %}>Scheduled</option>
+      <option value="CONFIRMED" {% if filters.status == 'CONFIRMED' %}selected{% endif %}>Confirmed</option>
+      <option value="COMPLETED" {% if filters.status == 'COMPLETED' %}selected{% endif %}>Completed</option>
+      <option value="CANCELLED" {% if filters.status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+    </select>
+  </div>
+  <button type="submit" class="erp-btn-secondary">Search</button>
+</form>
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>Appointment No</th>
+          <th>Scheduled</th>
+          <th>Customer</th>
+          <th>Consultant</th>
+          <th>Branch</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for apt in appointments %}
+        <tr>
+          <td class="font-mono text-xs font-medium">{{ apt.appointmentNo }}</td>
+          <td class="text-xs">{{ apt.scheduledAt | datetime }}</td>
+          <td>
+            <a href="/customer/{{ apt.customer.id }}" class="hover:underline">{{ apt.customer.firstName }} {{ apt.customer.lastName }}</a>
+          </td>
+          <td>{% if apt.consultant %}{{ apt.consultant.firstName }} {{ apt.consultant.lastName }}{% else %}—{% endif %}</td>
+          <td>{{ apt.branch.name }}</td>
+          <td><span class="erp-badge-neutral">{{ apt.type }}</span></td>
+          <td>{{ statusBadge(apt.status) }}</td>
+          <td><a href="/appointments/{{ apt.id }}" class="text-xs text-blue-600 hover:underline">View</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="erp-empty-cell">No appointments found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "partials/pagination.njk" %}
+</div>
+{% endblock %}

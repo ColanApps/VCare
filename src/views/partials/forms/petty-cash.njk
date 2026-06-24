@@ -1,0 +1,35 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/operations/petty-cash" enctype="multipart/form-data" class="erp-modal-form"
+  hx-post="/operations/petty-cash" hx-encoding="multipart/form-data" hx-swap="none">
+  <div class="erp-form-grid max-w-2xl">
+    <div class="erp-field">
+      <label class="erp-label">Branch</label>
+      <select name="branchId" class="erp-select">
+        {% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Amount (₹) *</label>
+      <input type="number" name="amount" class="erp-input" step="0.01" required data-currency>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Category</label>
+      <select name="category" class="erp-select">
+        <option value="STATIONERY">Stationery</option>
+        <option value="REFRESHMENTS">Refreshments</option>
+        <option value="TRANSPORT">Transport</option>
+        <option value="MAINTENANCE">Maintenance</option>
+        <option value="MISCELLANEOUS">Miscellaneous</option>
+      </select>
+    </div>
+    <div class="erp-field sm:col-span-2">
+      <label class="erp-label">Description *</label>
+      <textarea name="description" class="erp-input" rows="2" required></textarea>
+    </div>
+    <div class="erp-field sm:col-span-2">
+      <label class="erp-label">Receipt / bill attachment</label>
+      <input type="file" name="attachment" class="erp-input text-sm" accept="image/*,.pdf">
+    </div>
+  </div>
+  {{ formFooter() }}
+</form>

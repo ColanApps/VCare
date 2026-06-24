@@ -1,0 +1,84 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Location Targets') %}
+{% endcall %}
+
+<form method="GET" action="/master/targets" class="erp-filter-bar mb-6">
+  <div class="erp-field">
+    <label class="erp-label">Month</label>
+    <select name="month" class="erp-select">
+      <option value="1" {% if month == 1 %}selected{% endif %}>Jan</option>
+      <option value="2" {% if month == 2 %}selected{% endif %}>Feb</option>
+      <option value="3" {% if month == 3 %}selected{% endif %}>Mar</option>
+      <option value="4" {% if month == 4 %}selected{% endif %}>Apr</option>
+      <option value="5" {% if month == 5 %}selected{% endif %}>May</option>
+      <option value="6" {% if month == 6 %}selected{% endif %}>Jun</option>
+      <option value="7" {% if month == 7 %}selected{% endif %}>Jul</option>
+      <option value="8" {% if month == 8 %}selected{% endif %}>Aug</option>
+      <option value="9" {% if month == 9 %}selected{% endif %}>Sep</option>
+      <option value="10" {% if month == 10 %}selected{% endif %}>Oct</option>
+      <option value="11" {% if month == 11 %}selected{% endif %}>Nov</option>
+      <option value="12" {% if month == 12 %}selected{% endif %}>Dec</option>
+    </select>
+  </div>
+  <div class="erp-field w-28">
+    <label class="erp-label">Year</label>
+    <input type="number" name="year" value="{{ year }}" class="erp-input">
+  </div>
+  <button type="submit" class="erp-btn-secondary">Filter</button>
+</form>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold text-slate-900">Set Target</h3></div>
+    <form method="POST" action="/master/targets" class="erp-card-body space-y-4">
+      <div>
+        <label class="erp-label">Branch</label>
+        <select name="branchId" class="erp-select" required>
+          <option value="">Select branch</option>
+          {% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <input type="hidden" name="month" value="{{ month }}">
+      <input type="hidden" name="year" value="{{ year }}">
+      <div>
+        <label class="erp-label">Target Amount (₹)</label>
+        <input type="number" name="target" class="erp-input" step="0.01" required data-currency>
+      </div>
+      <button type="submit" class="erp-btn-primary w-full">Save Target</button>
+    </form>
+  </div>
+
+  <div class="lg:col-span-2 erp-card">
+    <div class="erp-card-header">
+      <h3 class="font-semibold text-slate-900">Targets — {{ ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][month-1] }} {{ year }}</h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="erp-table">
+        <thead>
+          <tr><th>Branch</th><th>Target</th><th>Achieved</th><th>Progress</th></tr>
+        </thead>
+        <tbody>
+          {% for t in targets %}
+          <tr>
+            <td class="font-medium">{{ t.branch.name }}</td>
+            <td>{{ t.target | currency }}</td>
+            <td>{{ t.achieved | currency }}</td>
+            <td>
+              {% set pct = (t.achieved / t.target * 100) if t.target > 0 else 0 %}
+              <div class="flex items-center gap-2">
+                <div class="erp-stat-bar flex-1"><div class="erp-stat-bar-fill" style="width: {% if pct > 100 %}100{% else %}{{ pct }}{% endif %}%"></div></div>
+                <span class="text-xs text-slate-500 w-10">{{ pct | round(0) }}%</span>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="erp-empty-cell">No targets set for this period</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+  </div>
+  </div>
+</div>
+{% endblock %}

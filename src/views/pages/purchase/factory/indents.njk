@@ -1,0 +1,44 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+{% block content %}
+{% call pageToolbar('Factory Indents', 'Production indent requests') %}
+  {{ modalTrigger('New Indent', '/purchase/factory/indents/form', 'Factory Indent', 'lg') }}
+  <a href="/purchase/factory/inward" class="erp-btn-secondary">Factory Inward</a>
+{% endcall %}
+<form method="GET" class="erp-filter-bar mb-4">
+  <div class="erp-field"><label class="erp-label">Status</label>
+    <select name="status" class="erp-select">
+      <option value="">All</option>
+      {% for s in ['PENDING','APPROVED','PARTIAL','FULFILLED','REJECTED'] %}
+      <option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="erp-btn-secondary">Filter</button>
+</form>
+<div class="space-y-4">
+  {% for ind in indents %}
+  <div class="erp-card">
+    <div class="erp-card-header">
+      <div><h3 class="font-semibold font-mono">{{ ind.indentNo }}</h3><span class="text-xs text-slate-500">{{ ind.branch.name }} · {{ ind.createdAt | date }}</span></div>
+      {{ statusBadge(ind.status) }}
+    </div>
+    <div class="erp-card-body">
+      <div class="overflow-x-auto">
+      <table class="erp-table text-sm mb-3"><thead><tr><th>Product</th><th>Qty</th><th>Fulfilled</th></tr></thead>
+      <tbody>{% for item in ind.items %}<tr><td>{{ item.product.name }}</td><td>{{ item.quantity }}</td><td>{{ item.fulfilled }}</td></tr>{% endfor %}</tbody></table>
+      </div>
+      {% if ind.status == 'PENDING' %}
+      <div class="flex gap-2">
+        <form method="POST" action="/purchase/factory/indents/{{ ind.id }}/approve"><input type="hidden" name="action" value="approve"><button class="erp-btn-primary text-sm">Approve</button></form>
+        <form method="POST" action="/purchase/factory/indents/{{ ind.id }}/approve"><input type="hidden" name="action" value="reject"><button class="erp-btn-secondary text-sm text-red-600">Reject</button></form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div class="erp-card"><div class="erp-card-body erp-empty-cell">No factory indents</div></div>
+  {% endfor %}
+</div>
+{% endblock %}

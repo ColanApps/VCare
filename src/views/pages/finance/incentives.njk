@@ -1,0 +1,97 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Incentive Payouts', 'Calculate → approve → mark paid') %}
+  <a href="/finance" class="erp-btn-secondary text-sm">Finance Hub</a>
+{% endcall %}
+
+<div class="erp-card mb-8">
+  <div class="erp-card-header"><h3 class="font-semibold text-slate-900">New Upload Batch</h3></div>
+  <form method="POST" action="/finance/incentives/upload" enctype="multipart/form-data" class="erp-card-body erp-form-grid max-w-2xl">
+    <div class="erp-field">
+      <label class="erp-label">Month</label>
+      <input type="number" name="periodMonth" class="erp-input" min="1" max="12" required>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Year</label>
+      <input type="number" name="periodYear" class="erp-input" min="2020" max="2099" value="2026" required>
+    </div>
+    <div class="erp-field sm:col-span-2">
+      <label class="erp-label">Source file (CSV / Excel export)</label>
+      <input type="file" name="file" class="erp-input text-sm" accept=".csv,.xlsx,.xls,.pdf,image/*">
+    </div>
+    <div class="erp-field sm:col-span-2">
+      <label class="erp-label">Notes</label>
+      <textarea name="notes" class="erp-input" rows="2"></textarea>
+    </div>
+    <div class="sm:col-span-2">
+      <button type="submit" class="erp-btn-primary">Create Upload Batch</button>
+    </div>
+  </form>
+</div>
+
+<div class="erp-card erp-table-card mb-8">
+  <div class="erp-card-header"><h3 class="font-semibold text-slate-900">Upload Batches</h3></div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead><tr><th>Period</th><th>Status</th><th>Total</th><th>Notes</th><th>File</th><th></th></tr></thead>
+      <tbody>
+        {% for u in uploads %}
+        <tr>
+          <td class="font-medium">{{ u.periodMonth }}/{{ u.periodYear }}</td>
+          <td><span class="erp-badge-neutral">{{ u.status }}</span></td>
+          <td>{{ u.totalAmount | currency }}</td>
+          <td class="text-xs text-slate-500 max-w-xs truncate">{{ u.notes or '—' }}</td>
+          <td class="text-xs">
+            {% if u.filePath %}<a href="{{ u.filePath }}" class="text-accent-600" target="_blank">File</a>{% else %}—{% endif %}
+          </td>
+          <td>
+            {% if u.status == 'PENDING' or u.status == 'CALCULATED' %}
+            <form method="POST" action="/finance/incentives/upload/{{ u.id }}/calculate">
+              <button type="submit" class="erp-btn-secondary text-xs">Calculate & Create Payouts</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="erp-empty-cell">No incentive upload batches.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+
+<div class="erp-card erp-table-card">
+  <div class="erp-card-header"><h3 class="font-semibold text-slate-900">Payout Lines</h3></div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead><tr><th>Payout #</th><th>Consultant</th><th>Period</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for p in payouts %}
+        <tr>
+          <td class="font-mono text-xs">{{ p.payoutNo }}</td>
+          <td>{{ p.consultant.firstName }} {{ p.consultant.lastName }}</td>
+          <td>{{ p.periodMonth }}/{{ p.periodYear }}</td>
+          <td class="font-medium">{{ p.amount | currency }}</td>
+          <td><span class="erp-badge-neutral">{{ p.status }}</span></td>
+          <td>
+            {% if p.status == 'CALCULATED' %}
+            <form method="POST" action="/finance/incentives/payout/{{ p.id }}/approve">
+              <button type="submit" class="erp-btn-secondary text-xs">Approve</button>
+            </form>
+            {% elif p.status == 'APPROVED' %}
+            <form method="POST" action="/finance/incentives/payout/{{ p.id }}/pay" class="flex flex-wrap items-center gap-2">
+              <input type="text" name="paymentRef" class="erp-input text-xs w-28" placeholder="Payment ref" required>
+              <button type="submit" class="erp-btn-primary text-xs">Mark Paid</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="erp-empty-cell">No payout lines yet. Run Calculate on an upload batch.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

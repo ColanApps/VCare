@@ -1,0 +1,47 @@
+{# Global modal — opened via $dispatch('erp-open-modal', { title, size }) #}
+<div
+  x-show="modal.open"
+  x-cloak
+  class="erp-modal-root"
+  @keydown.escape.window="if (modal.open) $dispatch('erp-close-modal')"
+  role="dialog"
+  aria-modal="true"
+  :aria-label="modal.title">
+  <div class="erp-modal-backdrop" @click="$dispatch('erp-close-modal')" x-show="modal.open" x-transition.opacity></div>
+  <div class="erp-modal-wrap" x-show="modal.open" x-transition>
+    <div class="erp-modal-panel"
+      :class="{
+        'erp-modal-sm': modal.size === 'sm',
+        'erp-modal-md': modal.size === 'md' || !modal.size,
+        'erp-modal-lg': modal.size === 'lg',
+        'erp-modal-xl': modal.size === 'xl',
+        'erp-modal-full': modal.size === 'full'
+      }"
+      @click.stop>
+      <div class="erp-modal-header">
+        <div>
+          <h2 class="erp-modal-title" x-text="modal.title"></h2>
+          <p class="erp-modal-subtitle" x-show="modal.subtitle" x-text="modal.subtitle"></p>
+        </div>
+        <button type="button" class="erp-modal-close" @click="$dispatch('erp-close-modal')" aria-label="Close">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="erp-modal-body" class="erp-modal-body">
+        <div class="erp-modal-loading">
+          <div class="erp-spinner"></div>
+          <span>Loading…</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="erp-toast-host" class="erp-toast-host" x-data="{ toasts: [] }"
+  @erp-flash.window="toasts.push($event.detail); setTimeout(() => toasts.shift(), 5000)">
+  <template x-for="(t, i) in toasts" :key="i">
+    <div class="erp-toast" :class="t.type === 'error' ? 'erp-toast-error' : 'erp-toast-success'" x-show="true" x-transition>
+      <span x-text="t.message"></span>
+    </div>
+  </template>
+</div>

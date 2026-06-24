@@ -1,0 +1,82 @@
+{% extends "layouts/main.njk" %}
+
+{% from "macros/components.njk" import statusBadge %}
+
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+
+{% block content %}
+
+{% call pageToolbar('Consultations', 'Customer consultation records and notes') %}
+
+  {{ modalTrigger('Record Consultation', '/customer/consultations/form', 'New Consultation', 'lg') }}
+
+{% endcall %}
+
+
+
+<div class="erp-card erp-table-card">
+
+  <div class="overflow-x-auto">
+
+    <table class="erp-table">
+
+      <thead>
+
+        <tr>
+
+          <th>Date</th>
+
+          <th>Customer</th>
+
+          <th>Consultant</th>
+
+          <th>Type</th>
+
+          <th>Chief Complaint</th>
+
+          <th>Status</th>
+
+        </tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for con in consultations %}
+
+        <tr>
+
+          <td class="text-xs whitespace-nowrap">{{ con.consultedAt | datetime }}</td>
+
+          <td>
+
+            <a href="/customer/{{ con.customer.id }}" class="hover:underline font-medium">{{ con.customer.firstName }} {{ con.customer.lastName }}</a>
+
+            <div class="text-[10px] text-slate-400">{{ con.customer.uhid }}</div>
+
+          </td>
+
+          <td>{{ con.consultant.firstName }} {{ con.consultant.lastName }}</td>
+
+          <td><span class="erp-badge-neutral">{{ con.type }}</span></td>
+
+          <td class="text-sm text-slate-600 max-w-xs truncate">{{ con.chiefComplaint or '—' }}</td>
+
+          <td>{{ statusBadge(con.status) }}</td>
+
+        </tr>
+
+        {% else %}
+
+        <tr><td colspan="6" class="erp-empty-cell">No consultations recorded</td></tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+</div>
+</div>
+
+{% endblock %}
+

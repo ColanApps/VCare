@@ -1,0 +1,101 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Customer Follow-Up Search') %}
+{% endcall %}
+
+<div class="erp-filter-bar mb-6">
+  <form method="GET" action="/call-center/follow-ups" class="">
+    <div class="erp-form-grid">
+      <div>
+        <label class="erp-label">Search</label>
+        <input type="text" name="q" value="{{ filters.q or '' }}" class="erp-input" placeholder="Name, phone, UHID...">
+      </div>
+      <div>
+        <label class="erp-label">Type</label>
+        <select name="type" class="erp-select">
+          <option value="">All types</option>
+          {% for key, label in followUpTypes %}
+          <option value="{{ key }}" {% if filters.type == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Status</label>
+        <select name="status" class="erp-select">
+          <option value="">All statuses</option>
+          <option value="PENDING" {% if filters.status == 'PENDING' %}selected{% endif %}>Pending</option>
+          <option value="COMPLETED" {% if filters.status == 'COMPLETED' %}selected{% endif %}>Completed</option>
+          <option value="CANCELLED" {% if filters.status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+        </select>
+      </div>
+      <div class="flex items-end gap-2">
+        <button type="submit" class="erp-btn-primary">Search</button>
+        <a href="/call-center/follow-ups" class="erp-btn-secondary">Clear</a>
+      </div>
+    </div>
+  </form></div>
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Type</th>
+          <th>Scheduled</th>
+          <th>Feedback</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for fu in followUps %}
+        <tr id="fu-{{ fu.id }}" class="{% if filters.followUpId == fu.id %}bg-amber-50 ring-1 ring-amber-200{% endif %}">
+          <td>
+            <a href="/customer/{{ fu.customer.id }}" class="hover:underline font-medium">{{ fu.customer.firstName }} {{ fu.customer.lastName }}</a>
+            <div class="text-[10px] text-slate-400 font-mono">{{ fu.customer.uhid }} · {{ fu.customer.phone }}</div>
+          </td>
+          <td><span class="erp-badge-neutral">{{ followUpTypes[fu.type] or (fu.type | replace('_', ' ')) }}</span></td>
+          <td class="text-xs">{% if fu.scheduledAt %}{{ fu.scheduledAt | datetime }}{% else %}—{% endif %}</td>
+          <td class="text-sm text-slate-600 max-w-xs truncate">{{ fu.feedback or '—' }}</td>
+          <td>{{ statusBadge(fu.status) }}</td>
+          <td>
+            {% if fu.status == 'PENDING' %}
+            <details class="text-xs">
+              <summary class="cursor-pointer text-accent-600 hover:underline">Complete</summary>
+              <form method="POST" action="/call-center/follow-ups/{{ fu.id }}/complete" class="mt-2 p-3 bg-slate-50 rounded-lg space-y-2 min-w-[220px]">
+                <div>
+                  <label class="erp-label">Feedback</label>
+                  <textarea name="feedback" class="erp-input text-xs" rows="2">{{ fu.feedback or '' }}</textarea>
+                </div>
+                <div>
+                  <label class="erp-label">Next Follow-Up</label>
+                  <input type="datetime-local" name="nextFollowUp" class="erp-input text-xs">
+                </div>
+                <button type="submit" class="erp-btn-primary text-xs w-full">Mark Complete</button>
+              </form>
+            </details>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="erp-empty-cell">No follow-ups found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "partials/pagination.njk" %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if filters.followUpId %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('fu-{{ filters.followUpId }}')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+</script>
+{% endif %}
+{% endblock %}

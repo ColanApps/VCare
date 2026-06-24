@@ -1,0 +1,34 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Central Warehouse Stock') %}
+{% endcall %}
+{% if not warehouse %}
+<div class="erp-card"><div class="erp-card-body text-center text-slate-400 py-8">Warehouse not configured</div></div>
+{% else %}
+<p class="text-sm text-slate-500 mb-4">{{ warehouse.name }} — {{ stocks | length }} product lines</p>
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+    <thead><tr><th>SKU</th><th>Product</th><th>Type</th><th>Batch</th><th>Quantity</th><th>MRP</th><th>Value</th><th>Last Updated</th></tr></thead>
+    <tbody>
+      {% for s in stocks %}
+      <tr>
+        <td class="font-mono text-xs">{{ s.product.sku }}</td>
+        <td class="font-medium">{{ s.product.name }}</td>
+        <td><span class="erp-badge-neutral">{{ s.product.type }}</span></td>
+        <td class="font-mono text-xs">{{ s.batchNo or '—' }}</td>
+        <td class="font-medium">{{ s.quantity }}</td>
+        <td>{{ s.product.mrp | currency }}</td>
+        <td>{{ (s.quantity * s.product.mrp) | currency }}</td>
+        <td class="text-xs text-slate-500">{{ s.updatedAt | date }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="erp-empty-cell">No stock at warehouse</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

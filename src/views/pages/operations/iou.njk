@@ -1,0 +1,50 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+{% block content %}
+{% call pageToolbar('IOU Requests', 'Staff advance requests and settlements') %}
+  {{ modalTrigger('New Request', '/operations/iou/form', 'New IOU Request', 'md') }}
+{% endcall %}
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr><th>Request No</th><th>Requester</th><th>Branch</th><th>Amount</th><th>Purpose</th><th>File</th><th>Status</th><th>Approved By</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for r in requests %}
+        <tr>
+          <td class="font-mono text-xs">{{ r.requestNo }}</td>
+          <td>{{ r.requester.firstName }} {{ r.requester.lastName }}</td>
+          <td>{% if r.branch %}{{ r.branch.name }}{% else %}—{% endif %}</td>
+          <td class="font-medium tabular-nums">{{ r.amount | currency }}</td>
+          <td class="text-sm text-slate-600 max-w-xs truncate">{{ r.purpose }}</td>
+          <td class="text-xs">{% if r.attachmentPath %}<a href="{{ r.attachmentPath }}" class="text-accent-600" target="_blank">View</a>{% else %}—{% endif %}</td>
+          <td>{{ statusBadge(r.status) }}</td>
+          <td>{% if r.approvedBy %}{{ r.approvedBy.firstName }} {{ r.approvedBy.lastName }}{% else %}—{% endif %}</td>
+          <td class="whitespace-nowrap">
+            {% if r.status == 'PENDING' %}
+            <form method="POST" action="/operations/iou/{{ r.id }}/approve" class="inline-flex gap-1">
+              <input type="hidden" name="action" value="approve">
+              <button type="submit" class="erp-btn-primary text-xs px-2 py-1">Approve</button>
+            </form>
+            <form method="POST" action="/operations/iou/{{ r.id }}/approve" class="inline">
+              <input type="hidden" name="action" value="reject">
+              <button type="submit" class="erp-btn-ghost text-xs px-2 py-1 text-red-600">Reject</button>
+            </form>
+            {% elif r.status == 'APPROVED' %}
+            <form method="POST" action="/operations/iou/{{ r.id }}/settle" class="inline">
+              <button type="submit" class="erp-btn-secondary text-xs px-2 py-1">Settle</button>
+            </form>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="erp-empty-cell">No IOU requests</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

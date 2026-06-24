@@ -1,0 +1,95 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+<p class="mb-3"><a href="/reports/consultants" class="text-sm text-accent-600 hover:underline">← All Consultants</a></p>
+{% set consultantSubtitle %}{% if consultant.designation %}{{ consultant.designation.name }}{% else %}{{ consultant.role.name }}{% endif %} · {% if consultant.branch %}{{ consultant.branch.name }}{% endif %} · {{ period.start | date }} – {{ period.end | date }}{% endset %}
+{% call pageToolbar(consultant.firstName ~ ' ' ~ consultant.lastName, consultantSubtitle) %}
+{% endcall %}
+
+<div class="erp-kpi-grid mb-6">
+  <div class="erp-kpi"><div class="erp-kpi-label">Revenue</div><div class="erp-kpi-value mt-1 text-emerald-600">{{ revenue | currency }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Collected</div><div class="erp-kpi-value mt-1">{{ collected | currency }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Bills</div><div class="erp-kpi-value mt-1">{{ billCount }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Appointments</div><div class="erp-kpi-value mt-1">{{ appointmentCount }}</div></div>
+</div>
+
+{% if target > 0 %}
+<div class="erp-card mb-6">
+  <div class="erp-card-body">
+    <div class="flex justify-between text-sm mb-2"><span>Target Achievement</span><span class="font-medium">{% if target > 0 %}{{ ((revenue / target) * 100) | round(1) }}{% else %}0{% endif %}%</span></div>
+    <div class="erp-stat-bar"><div class="erp-stat-bar-fill" style="width: {% if target > 0 and (revenue / target * 100) > 100 %}100{% elif target > 0 %}{{ ((revenue / target) * 100) | round(0) }}{% else %}0{% endif %}%"></div></div>
+    <div class="text-xs text-slate-500 mt-1">Target {{ target | currency }} · Achieved {{ revenue | currency }}</div>
+  </div>
+</div>
+{% endif %}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Treatment / Service Mix</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table text-sm">
+      <thead><tr><th>Item</th><th>Revenue</th></tr></thead>
+      <tbody>
+        {% for t in treatmentBreakdown %}
+        <tr><td>{{ t.name }}</td><td class="font-medium">{{ t.amount | currency }}</td></tr>
+        {% else %}
+        <tr><td colspan="2" class="text-center text-slate-400 py-4">No bill data</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+      </div></div>
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Consultations ({{ consultationCount }})</h3></div>
+    <div class="max-h-64 overflow-y-auto divide-y divide-surface-border">
+      {% for c in consultations %}
+      <div class="p-3 text-sm">
+        <div class="font-medium">{{ c.customer.firstName }} {{ c.customer.lastName }}</div>
+        <div class="text-xs text-slate-500">{{ c.consultedAt | date }} · {{ c.type }} · {{ statusBadge(c.status) }}</div>
+      </div>
+      {% else %}
+      <div class="p-6 text-center text-slate-400">No consultations this month</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="erp-card mb-6">
+  <div class="erp-card-header"><h3 class="font-semibold">Bills Raised ({{ billCount }})</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table text-sm">
+    <thead><tr><th>Bill No</th><th>Date</th><th>Customer</th><th>Total</th><th>Paid</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for b in bills %}
+      <tr>
+        <td class="font-mono text-xs"><a href="/billing/{{ b.id }}" class="text-accent-600">{{ b.billNo }}</a></td>
+        <td>{{ b.billDate | date }}</td>
+        <td>{{ b.customer.firstName }} {{ b.customer.lastName }}</td>
+        <td class="font-medium">{{ b.totalAmount | currency }}</td>
+        <td>{{ b.paidAmount | currency }}</td>
+        <td>{{ statusBadge(b.status) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+      </div></div>
+
+<div class="erp-card erp-table-card">
+  <div class="erp-card-header"><h3 class="font-semibold">Appointments ({{ appointmentCount }})</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table text-sm">
+    <thead><tr><th>Appt No</th><th>Date</th><th>Customer</th><th>Category</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for a in appointments %}
+      <tr>
+        <td class="font-mono text-xs">{{ a.appointmentNo }}</td>
+        <td>{{ a.scheduledAt | datetime }}</td>
+        <td>{{ a.customer.firstName }} {{ a.customer.lastName }}</td>
+        <td><span class="erp-badge-neutral">{{ a.category }}</span></td>
+        <td>{{ statusBadge(a.status) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+      </div></div>
+{% endblock %}

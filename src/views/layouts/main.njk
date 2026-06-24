@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }} · {{ appName }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/app.css">
+  <script src="/js/app.js"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+</head>
+<body class="h-full erp-body"
+  x-data="erpShell({ activeModule: '{{ activeModule or 'dashboard' }}' })"
+  x-init="init()"
+  @erp-open-modal.window="openModal($event.detail)"
+  @erp-close-modal.window="closeModal()"
+  @erp-flash.window="showToast($event.detail)">
+
+  {% include "partials/sidebar-shell.njk" %}
+
+  <div class="erp-main">
+    {% include "partials/header.njk" %}
+    <main class="erp-content page-enter">
+      {% include "partials/breadcrumbs.njk" %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  {% include "partials/toast-stack.njk" %}
+  {% include "partials/modal-shell.njk" %}
+
+  {% block scripts %}{% endblock %}
+
+  {% if autoOpenModal %}
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      window.dispatchEvent(new CustomEvent('erp-open-modal', { detail: {{ autoOpenModal | json | safe }} }));
+      htmx.ajax('GET', '{{ autoOpenModal.url }}', { target: '#erp-modal-body', swap: 'innerHTML' });
+    });
+  </script>
+  {% endif %}
+</body>
+</html>

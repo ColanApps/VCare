@@ -1,0 +1,32 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Next Sitting Follow-Ups', 'Weekly / monthly treatment session rebooking queue') %}
+  <a href="/call-center/follow-ups" class="erp-btn-secondary text-sm">All Follow-ups</a>
+{% endcall %}
+
+<div class="erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead><tr><th>Customer</th><th>UHID</th><th>Due Date</th><th>Cadence</th><th>Notes</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for fu in followUps %}
+        {% set slip = fu.customer.treatmentSlips[0] %}
+        <tr>
+          <td class="font-medium">{{ fu.customer.firstName }} {{ fu.customer.lastName }}</td>
+          <td class="font-mono text-xs">{{ fu.customer.uhid }}</td>
+          <td>{{ fu.scheduledAt | date if fu.scheduledAt else '—' }}</td>
+          <td><span class="erp-badge-info text-xs">{{ slip.sessionCadence if slip else 'WEEKLY' }}</span></td>
+          <td class="text-sm text-slate-600">{{ fu.feedback or '—' }}</td>
+          <td>
+            <a href="/appointments/procedures/book?customerId={{ fu.customerId }}" class="erp-btn-primary text-xs">Book Session</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="erp-empty-cell">No pending next-sitting follow-ups</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

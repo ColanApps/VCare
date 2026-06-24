@@ -1,0 +1,81 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Factory Inward') %}
+{% endcall %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Receive Inward</h3></div>
+    <form method="POST" action="/purchase/factory/inward" id="finw-form" class="erp-card-body space-y-4">
+      <div><label class="erp-label">Factory Indent *</label>
+        <select name="indentId" id="finw-indent" class="erp-select" required>
+          <option value="">Select indent</option>
+          {% for ind in indents %}<option value="{{ ind.id }}">{{ ind.indentNo }} — {{ ind.branch.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div><label class="erp-label">Vendor *</label>
+        <select name="vendorId" class="erp-select" required>{% for v in vendors %}<option value="{{ v.id }}">{{ v.name }}</option>{% endfor %}</select>
+      </div>
+      <div><label class="erp-label">Receiving Branch *</label>
+        <select name="branchId" class="erp-select" required>{% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select>
+      </div>
+      <div id="finw-items-section" class="hidden">
+        <table class="erp-table text-sm"><thead><tr><th>Product</th><th>Pending</th><th>Qty</th><th>Rate</th></tr></thead>
+        <tbody id="finw-items-body"></tbody></table>
+      </div>
+      <input type="hidden" name="items" id="finw-items-json" value="[]">
+      <div><label class="erp-label">Notes</label><textarea name="notes" class="erp-input" rows="2"></textarea></div>
+      <button type="submit" class="erp-btn-primary w-full">Record Inward & QC</button>
+    </form>
+  </div>
+  <div class="lg:col-span-2 erp-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Approved Indents</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table text-sm">
+      <thead><tr><th>Indent</th><th>Branch</th><th>Lines</th><th>Status</th></tr></thead>
+      <tbody>{% for ind in indents %}<tr><td class="font-mono text-xs">{{ ind.indentNo }}</td><td>{{ ind.branch.name }}</td><td>{{ ind.items | length }}</td><td>{{ statusBadge(ind.status) }}</td></tr>{% else %}<tr><td colspan="4" class="erp-empty-cell">No approved indents</td></tr>{% endfor %}</tbody>
+    </table>
+</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const indentData = {{ indents | json | safe }};
+const indentMap = {};
+indentData.forEach(ind => {
+  indentMap[ind.id] = (ind.items || []).map(item => ({
+    productId: item.productId,
+    name: item.product?.name || 'Product',
+    pending: item.quantity - (item.fulfilled || 0),
+    unitPrice: item.product?.costPrice || 0,
+  }));
+});
+const finwItems = [];
+function renderFinwItems(id) {
+  const section = document.getElementById('finw-items-section');
+  const tbody = document.getElementById('finw-items-body');
+  const input = document.getElementById('finw-items-json');
+  finwItems.length = 0;
+  const items = (indentMap[id] || []).filter(i => i.pending > 0);
+  if (!items.length) { section.classList.add('hidden'); return; }
+  section.classList.remove('hidden');
+  tbody.innerHTML = items.map((item, i) => {
+    finwItems.push({ productId: item.productId, quantity: item.pending, unitPrice: item.unitPrice });
+    return `<tr><td>${item.name}</td><td>${item.pending}</td>
+      <td><input type="number" class="erp-input w-20 text-sm finw-qty" data-index="${i}" value="${item.pending}" min="0" max="${item.pending}"></td>
+      <td><input type="number" class="erp-input w-24 text-sm finw-price" data-index="${i}" value="${item.unitPrice}" step="0.01"></td></tr>`;
+  }).join('');
+  input.value = JSON.stringify(finwItems);
+  tbody.querySelectorAll('.finw-qty').forEach(el => el.addEventListener('input', () => {
+    finwItems[parseInt(el.dataset.index, 10)].quantity = parseInt(el.value, 10) || 0;
+    input.value = JSON.stringify(finwItems);
+  }));
+  tbody.querySelectorAll('.finw-price').forEach(el => el.addEventListener('input', () => {
+    finwItems[parseInt(el.dataset.index, 10)].unitPrice = parseFloat(el.value) || 0;
+    input.value = JSON.stringify(finwItems);
+  }));
+}
+document.getElementById('finw-indent')?.addEventListener('change', function() { renderFinwItems(this.value); });
+</script>
+{% endblock %}

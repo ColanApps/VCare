@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }} · {{ appName }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/app.css">
+  <script defer src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+</head>
+<body class="h-full bg-slate-50">
+  <header class="bg-gradient-to-r from-slate-900 via-slate-800 to-accent-900 text-white shadow-lg">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <a href="/dashboard" class="text-xl font-bold tracking-tight">{{ appName }}</a>
+        <span class="text-xs px-2 py-1 rounded-full bg-white/10 uppercase tracking-wider">
+          {% if portalType == 'corporate' %}Corporate{% elif portalType == 'accounts' %}Accounts{% else %}Portal{% endif %}
+        </span>
+      </div>
+      <nav class="flex items-center gap-2">
+        {% if user.roleCode == 'SUPER_ADMIN' or user.roleCode == 'CORPORATE' %}
+        <a href="/portal/corporate" class="px-3 py-1.5 text-sm rounded-lg {% if portalType == 'corporate' %}bg-white/20{% else %}hover:bg-white/10{% endif %}">Corporate</a>
+        {% endif %}
+        {% if user.roleCode == 'SUPER_ADMIN' or user.roleCode == 'ACCOUNTS' %}
+        <a href="/portal/accounts" class="px-3 py-1.5 text-sm rounded-lg {% if portalType == 'accounts' %}bg-white/20{% else %}hover:bg-white/10{% endif %}">Accounts</a>
+        {% endif %}
+        <a href="/dashboard" class="px-3 py-1.5 text-sm rounded-lg hover:bg-white/10">Full ERP</a>
+        <form method="POST" action="/auth/logout" class="inline ml-2">
+          <button type="submit" class="px-3 py-1.5 text-sm rounded-lg bg-white/10 hover:bg-white/20">{{ user.firstName }}</button>
+        </form>
+      </nav>
+    </div>
+  </header>
+  <main class="max-w-7xl mx-auto p-6 page-enter">
+    {% include "partials/flash.njk" %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="max-w-7xl mx-auto px-6 py-4 text-xs text-slate-400 flex justify-between">
+    <span>{{ appName }} Portal</span>
+    <span>© 2026 VCare Clinics</span>
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

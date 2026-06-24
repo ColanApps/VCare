@@ -1,0 +1,29 @@
+{% extends "layouts/portal.njk" %}
+{% from "macros/ui.njk" import pageToolbar, hubTile %}
+{% block content %}
+{% call pageToolbar('Warehouse Portal') %}
+{% endcall %}
+
+<div class="erp-kpi-grid mb-8">
+  <div class="erp-kpi"><div class="erp-kpi-label">Stock SKUs</div><div class="erp-kpi-value mt-1">{{ stockCount | number }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Pending Indents</div><div class="erp-kpi-value mt-1 text-amber-600">{{ pendingIndents | number }}</div></div>
+</div>
+
+<h2 class="erp-section-title">Workflows</h2>
+<div class="erp-hub-grid mb-8">
+  {{ hubTile('/warehouse', 'Dispatch Center', 'Process indents and inter-branch transfers') }}
+  {{ hubTile('/warehouse/stock', 'Stock View', 'Current inventory levels by product') }}
+  {% set indentBadge = (pendingIndents ~ ' pending') if pendingIndents else '' %}
+  {{ hubTile('/warehouse/dispatch', 'Dispatch Queue', 'Fulfill approved indents and transfers', indentBadge) }}
+</div>
+
+<div class="erp-card erp-table-card">
+  <div class="erp-card-header"><h3 class="font-semibold">Top Stock by Quantity</h3></div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead><tr><th>Product</th><th>Qty</th></tr></thead>
+      <tbody>{% for s in stock %}<tr><td>{{ s.product.name }}</td><td>{{ s.quantity }}</td></tr>{% else %}<tr><td colspan="2" class="erp-empty-cell">No stock records</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

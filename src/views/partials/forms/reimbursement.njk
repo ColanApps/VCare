@@ -1,0 +1,20 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/operations/iou/reimbursement" enctype="multipart/form-data" class="erp-modal-form"
+  hx-post="/operations/iou/reimbursement" hx-encoding="multipart/form-data" hx-swap="none">
+  <div class="erp-form-grid max-w-lg">
+    <div class="erp-field">
+      <label class="erp-label">Amount (₹) *</label>
+      <input type="number" name="amount" class="erp-input" step="0.01" required>
+    </div>
+    <div class="erp-field sm:col-span-2">
+      <label class="erp-label">Purpose *</label>
+      <textarea name="purpose" class="erp-input" rows="3" required placeholder="Travel, supplies, client visit…"></textarea>
+    </div>
+    <div class="erp-field sm:col-span-2">
+      <label class="erp-label">Receipt / bill attachment</label>
+      <input type="file" name="receipt" class="erp-input text-sm" accept="image/*,.pdf">
+      <p class="text-xs text-slate-500 mt-1">Upload invoice or receipt supporting this claim.</p>
+    </div>
+  </div>
+  {{ formFooter('Submit Claim') }}
+</form>

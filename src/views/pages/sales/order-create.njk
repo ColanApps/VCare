@@ -1,0 +1,83 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Create Sales Order') %}
+{% endcall %}
+
+<form method="POST" action="/sales/orders/create" id="so-form">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="erp-card erp-table-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Order Details</h3></div>
+      <div class="erp-card-body space-y-4">
+        <div>
+          <label class="erp-label">Customer *</label>
+          <select name="customerId" class="erp-select" required>
+            <option value="">Select customer</option>
+            {% for c in customers %}<option value="{{ c.id }}">{{ c.firstName }} {{ c.lastName }} ({{ c.uhid }})</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="erp-label">Notes</label>
+          <textarea name="notes" class="erp-input" rows="3"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="lg:col-span-2 erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Products</h3></div>
+      <div class="erp-card-body">
+        <div class="flex flex-wrap gap-2 mb-4 p-3 bg-slate-50 rounded-lg">
+          <select id="product-select" class="erp-select text-sm flex-1 min-w-[200px]">
+            {% for p in products %}
+            <option value="{{ p.id }}|{{ p.name }}|{{ p.mrp }}">{{ p.name }} — {{ p.mrp | currency }}</option>
+            {% endfor %}
+          </select>
+          <input type="number" id="item-qty" class="erp-input w-20 text-sm" value="1" min="1">
+          <input type="number" id="item-price" class="erp-input w-24 text-sm" placeholder="Rate" step="0.01">
+          <button type="button" onclick="addSoItem()" class="erp-btn-secondary text-sm">Add</button>
+        </div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+          <thead><tr><th>Product</th><th>Qty</th><th>Rate</th><th>Total</th><th></th></tr></thead>
+          <tbody id="so-items-body"><tr><td colspan="5" class="erp-empty-cell">Add products</td></tr></tbody>
+        </table>
+        <input type="hidden" name="items" id="so-items-json" value="[]">
+        <div class="mt-4 flex justify-between items-center">
+          <div class="text-2xl font-semibold" id="so-total">₹0</div>
+          <button type="submit" class="erp-btn-primary">Create Sales Order</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const soItems = [];
+function addSoItem() {
+  const [productId, name, mrp] = document.getElementById('product-select').value.split('|');
+  const qty = parseInt(document.getElementById('item-qty').value, 10) || 1;
+  const customPrice = parseFloat(document.getElementById('item-price').value);
+  const unitPrice = !isNaN(customPrice) && customPrice > 0 ? customPrice : parseFloat(mrp);
+  soItems.push({ productId, quantity: qty, unitPrice, productName: name });
+  renderSoItems();
+}
+function removeSoItem(i) { soItems.splice(i, 1); renderSoItems(); }
+function renderSoItems() {
+  const tbody = document.getElementById('so-items-body');
+  let total = 0;
+  if (!soItems.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="erp-empty-cell">Add products</td></tr>';
+  } else {
+    tbody.innerHTML = soItems.map((item, i) => {
+      const line = item.quantity * item.unitPrice;
+      total += line;
+      return `<tr><td>${item.productName}</td><td>${item.quantity}</td><td>₹${item.unitPrice}</td><td>₹${line.toFixed(2)}</td><td><button type="button" onclick="removeSoItem(${i})" class="text-red-500 text-xs">Remove</button></td></tr>`;
+    }).join('');
+  }
+  document.getElementById('so-items-json').value = JSON.stringify(soItems);
+  document.getElementById('so-total').textContent = '₹' + total.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+}
+</script>
+{% endblock %}

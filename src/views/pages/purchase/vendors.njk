@@ -1,0 +1,62 @@
+{% extends "layouts/main.njk" %}
+
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+
+{% block content %}
+
+{% call pageToolbar('Vendor Master', 'Manage suppliers and payment terms') %}
+
+  {{ modalTrigger('Add Vendor', '/purchase/vendors/form', 'New Vendor', 'lg') }}
+
+{% endcall %}
+
+
+
+<div class="erp-card erp-table-card">
+
+  <div class="overflow-x-auto">
+
+    <table class="erp-table">
+
+      <thead>
+
+        <tr><th>Code</th><th>Name</th><th>Type</th><th>Terms</th><th>Credit</th><th>GSTIN</th><th>Status</th></tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for v in vendors %}
+
+        <tr>
+
+          <td class="font-mono text-xs">{{ v.code }}</td>
+
+          <td class="font-medium">{{ v.name }}</td>
+
+          <td><span class="erp-badge-neutral">{{ v.type }}</span></td>
+
+          <td class="text-sm">{{ v.paymentTerms or '—' }}</td>
+
+          <td class="text-sm">{% if v.creditDays %}{{ v.creditDays }}d{% else %}—{% endif %}</td>
+
+          <td class="font-mono text-xs">{{ v.gstin or '—' }}</td>
+
+          <td>{% if v.isActive %}<span class="erp-badge-success">Active</span>{% else %}<span class="erp-badge-danger">Inactive</span>{% endif %}</td>
+
+        </tr>
+
+        {% else %}
+
+        <tr><td colspan="7" class="erp-empty-cell">No vendors configured</td></tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+</div>
+</div>
+
+{% endblock %}
+

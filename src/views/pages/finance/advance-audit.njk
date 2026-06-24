@@ -1,0 +1,42 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Advance Application Audit', applications | length ~ ' applications · ' ~ (totalApplied | currency) ~ ' applied') %}
+  <a href="/finance" class="erp-btn-secondary text-sm">Finance Hub</a>
+  <a href="/billing/advances" class="erp-btn-secondary text-sm">Advance Receipts</a>
+{% endcall %}
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>Applied At</th>
+          <th>Receipt</th>
+          <th>Customer</th>
+          <th>Bill</th>
+          <th>Amount</th>
+          <th>Applied By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in applications %}
+        <tr>
+          <td class="text-xs">{{ a.appliedAt | datetime }}</td>
+          <td class="font-mono text-xs"><a href="/billing/advances" class="text-accent-600">{{ a.advance.receiptNo }}</a></td>
+          <td>
+            <a href="/customer/{{ a.bill.customer.id }}" class="font-medium hover:underline">{{ a.bill.customer.firstName }} {{ a.bill.customer.lastName }}</a>
+            <div class="text-[10px] text-slate-400">{{ a.bill.customer.uhid }}</div>
+          </td>
+          <td><a href="/billing/{{ a.bill.id }}" class="text-accent-600 font-mono text-xs">{{ a.bill.billNo }}</a></td>
+          <td class="font-medium">{{ a.amount | currency }}</td>
+          <td class="text-sm">{{ a.appliedBy.firstName }} {{ a.appliedBy.lastName }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="erp-empty-cell">No advance applications recorded yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

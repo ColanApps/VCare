@@ -1,0 +1,115 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Inflow Sales Breakdown') %}
+{% endcall %}
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">Total Inflow</div>
+    <div class="erp-kpi-value mt-1">{{ inflow.total | currency }}</div>
+    <div class="text-xs text-slate-400 mt-2">This month</div>
+  </div>
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">Existing Customers</div>
+    <div class="erp-kpi-value mt-1">{{ inflow.existing.revenue | currency }}</div>
+    <div class="text-xs text-slate-400 mt-2">{{ inflow.existing.count | number }} bills</div>
+  </div>
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">New Customers</div>
+    <div class="erp-kpi-value mt-1">{{ inflow.new.revenue | currency }}</div>
+    <div class="text-xs text-emerald-600 mt-2">{{ inflow.new.count | number }} bills</div>
+  </div>
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">Category Split</div>
+    <div class="flex gap-4 mt-2">
+      <div>
+        <div class="text-xs text-slate-500">Hair</div>
+        <div class="font-semibold text-slate-900">{{ inflow.hair | currency }}</div>
+      </div>
+      <div>
+        <div class="text-xs text-slate-500">Skin</div>
+        <div class="font-semibold text-slate-900">{{ inflow.skin | currency }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="erp-pair-grid mb-6">
+  <div class="erp-card">
+    <div class="erp-card-header">
+      <h3 class="font-semibold text-slate-900">Customer Type Distribution</h3>
+    </div>
+    <div class="erp-card-body">
+      <div class="erp-chart-wrap erp-chart-wrap-md">
+        <canvas id="inflowChart"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="erp-card">
+    <div class="erp-card-header">
+      <h3 class="font-semibold text-slate-900">Category Revenue</h3>
+    </div>
+    <div class="erp-card-body space-y-4">
+      {% set hairPct = (inflow.hair / (inflow.hair + inflow.skin) * 100) if (inflow.hair + inflow.skin) > 0 else 0 %}
+      {% set skinPct = 100 - hairPct %}
+      <div>
+        <div class="flex justify-between text-xs mb-1.5">
+          <span class="font-medium text-slate-700">Hair</span>
+          <span class="text-slate-500">{{ hairPct | round(1) }}%</span>
+        </div>
+        <div class="erp-stat-bar"><div class="erp-stat-bar-fill bg-amber-500" style="width: {{ hairPct }}%"></div></div>
+        <div class="text-[10px] text-slate-400 mt-1">{{ inflow.hair | currency }}</div>
+      </div>
+      <div>
+        <div class="flex justify-between text-xs mb-1.5">
+          <span class="font-medium text-slate-700">Skin</span>
+          <span class="text-slate-500">{{ skinPct | round(1) }}%</span>
+        </div>
+        <div class="erp-stat-bar"><div class="erp-stat-bar-fill bg-rose-500" style="width: {{ skinPct }}%"></div></div>
+        <div class="text-[10px] text-slate-400 mt-1">{{ inflow.skin | currency }}</div>
+      </div>
+      <div class="pt-4 border-t border-surface-border">
+        <div class="flex justify-between text-xs mb-1.5">
+          <span class="font-medium text-slate-700">Existing vs New</span>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mt-2">
+          <div class="p-3 bg-slate-50 rounded-lg text-center">
+            <div class="text-lg font-semibold text-slate-900">{{ inflow.existing.revenue | currency }}</div>
+            <div class="text-xs text-slate-500">Existing</div>
+          </div>
+          <div class="p-3 bg-emerald-50 rounded-lg text-center">
+            <div class="text-lg font-semibold text-emerald-700">{{ inflow.new.revenue | currency }}</div>
+            <div class="text-xs text-slate-500">New</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const inflowData = {
+    existing: {{ inflow.existing.revenue }},
+    newCust: {{ inflow.new.revenue }},
+    hair: {{ inflow.hair }},
+    skin: {{ inflow.skin }}
+  };
+  erpCreateChart('inflowChart', {
+    type: 'doughnut',
+    data: {
+      labels: ['Existing Customers', 'New Customers'],
+      datasets: [{
+        data: [inflowData.existing, inflowData.newCust],
+        backgroundColor: ['#64748b', '#14b89a'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+</script>
+{% endblock %}

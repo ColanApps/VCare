@@ -1,0 +1,27 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/inventory/products" class="erp-modal-form"
+  hx-post="/inventory/products" hx-swap="none">
+  <div class="erp-form-grid">
+    <div class="erp-field"><label class="erp-label">SKU</label><input type="text" name="sku" class="erp-input" required></div>
+    <div class="erp-field"><label class="erp-label">Name</label><input type="text" name="name" class="erp-input" required></div>
+    <div class="erp-field">
+      <label class="erp-label">Type</label>
+      <select name="type" class="erp-select"><option value="BILLABLE">Billable</option><option value="CONSUMABLE">Consumable</option></select>
+    </div>
+    <div class="erp-field"><label class="erp-label">Category</label><input type="text" name="category" class="erp-input"></div>
+    <div class="erp-field"><label class="erp-label">HSN Code</label><input type="text" name="hsnCode" class="erp-input"></div>
+    <div class="erp-field"><label class="erp-label">Unit</label><input type="text" name="unit" class="erp-input" value="PCS"></div>
+    <div class="erp-field"><label class="erp-label">MRP</label><input type="number" name="mrp" class="erp-input" step="0.01" data-currency></div>
+    <div class="erp-field"><label class="erp-label">Cost Price</label><input type="number" name="costPrice" class="erp-input" step="0.01" data-currency></div>
+    <div class="erp-field"><label class="erp-label">Tax Rate (%)</label><input type="number" name="taxRate" class="erp-input" value="18"></div>
+    <div class="erp-field"><label class="erp-label">Reorder Level</label><input type="number" name="reorderLevel" class="erp-input" value="10"></div>
+    <div class="erp-field">
+      <label class="erp-label">Vendor</label>
+      <select name="vendorId" class="erp-select">
+        <option value="">None</option>
+        {% for v in vendors %}<option value="{{ v.id }}">{{ v.name }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+  {{ formFooter() }}
+</form>

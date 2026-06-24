@@ -1,0 +1,41 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+{% block content %}
+{% call pageToolbar('Purchase Orders', 'Vendor purchase orders and approvals') %}
+  {{ modalTrigger('Create PO', '/purchase/orders/create', 'Create Purchase Order', 'xl') }}
+{% endcall %}
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>PO No</th>
+          <th>Vendor</th>
+          <th>Items</th>
+          <th>Total</th>
+          <th>Expected Date</th>
+          <th>Status</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orders %}
+        <tr>
+          <td class="font-mono text-xs font-medium">{{ o.poNo }}</td>
+          <td>{{ o.vendor.name }}</td>
+          <td>{{ o.items | length }} items</td>
+          <td class="font-medium">{{ o.totalAmount | currency }}</td>
+          <td class="text-xs">{% if o.expectedDate %}{{ o.expectedDate | date }}{% else %}—{% endif %}</td>
+          <td>{{ statusBadge(o.status) }}</td>
+          <td class="text-xs text-slate-500">{{ o.createdAt | date }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="erp-empty-cell">No purchase orders found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

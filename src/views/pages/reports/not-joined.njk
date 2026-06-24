@@ -1,0 +1,31 @@
+{% extends "layouts/main.njk" %}
+{% from "partials/report-filters.njk" import reportPeriodFilter %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Treatment Not Joined') %}
+{% endcall %}
+{{ reportPeriodFilter('/reports/not-joined', period) }}
+<p class="text-sm text-slate-500 mb-6">Registered {{ period.from | date }} — {{ period.to | date }} with no bills</p>
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+    <thead><tr><th>UHID</th><th>Name</th><th>Branch</th><th>Phone</th><th>Registered</th><th>Follow-ups</th></tr></thead>
+    <tbody>
+      {% for c in customers %}
+      <tr>
+        <td class="font-mono text-xs">{{ c.uhid }}</td>
+        <td><a href="/customer/{{ c.id }}" class="text-accent-600 hover:underline">{{ c.firstName }} {{ c.lastName }}</a></td>
+        <td>{{ c.branch.name }}</td>
+        <td>{{ c.phone }}</td>
+        <td class="text-xs">{{ c.registeredAt | date }}</td>
+        <td class="text-xs">{{ c.followUps | length }} logged</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="erp-empty-cell">No not-joined clients in period</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

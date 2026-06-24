@@ -1,0 +1,70 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import taskRow %}
+{% block content %}
+
+<div class="erp-hero">
+  <div class="erp-hero-bg" style="background-image: url('https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1200&auto=format&fit=crop&q=80');"></div>
+  <div class="erp-hero-overlay"></div>
+  <div class="erp-hero-body">
+    <span class="erp-hero-tag">Clinic Operations</span>
+    <h1 class="erp-hero-title">Good day, {{ user.firstName }}</h1>
+    <p class="erp-hero-sub">{{ user.roleName }}{% if user.branchName %} · {{ user.branchName }}{% endif %}</p>
+    <div class="erp-hero-pills">
+      <span class="erp-hero-pill">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        {{ queue.totalTasks }} in queue
+      </span>
+      {% if queue.summary.urgent > 0 %}
+      <span class="erp-hero-pill bg-amber-500/30">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        {{ queue.summary.urgent }} urgent
+      </span>
+      {% endif %}
+      <span class="erp-hero-pill">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        {{ queue.summary.high }} high priority
+      </span>
+    </div>
+  </div>
+</div>
+
+<div class="erp-overview-label">Overview</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 mb-8">
+  {% set iconColors = ['bg-orange-100 text-orange-600', 'bg-red-100 text-red-600', 'bg-sky-100 text-sky-600', 'bg-teal-100 text-teal-600', 'bg-violet-100 text-violet-600', 'bg-amber-100 text-amber-600'] %}
+  {% for k in kpis %}
+  <div class="erp-metric-card">
+    <div class="erp-metric-icon {{ iconColors[loop.index0 % iconColors.length] }}">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+    </div>
+    <div>
+      <div class="erp-metric-value {% if k.tone == 'urgent' %}text-red-600{% elif k.tone == 'amber' %}text-amber-600{% endif %}">
+        {% if k.format == 'currency' %}{{ k.value | currency }}{% else %}{{ k.value }}{% endif %}
+      </div>
+      <div class="erp-metric-label">{{ k.label }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<h2 class="text-base font-bold text-slate-900 mb-3">Quick actions</h2>
+<div class="erp-quick-actions-bar">
+  <a href="/dashboard/my-tasks" class="erp-quick-action-btn font-semibold border-navy bg-navy text-white hover:bg-navy-900 hover:border-navy-900">My Tasks ({{ queue.totalTasks }})</a>
+  {% for link in links %}
+  <a href="{{ link.url }}" class="erp-quick-action-btn">{{ link.label }}</a>
+  {% endfor %}
+</div>
+
+<div class="erp-card overflow-hidden">
+  <div class="erp-card-header">
+    <h3 class="font-semibold text-slate-900">Top Tasks</h3>
+    <a href="/dashboard/my-tasks" class="text-xs text-brand-600 font-medium hover:text-brand-700">View all →</a>
+  </div>
+  <div>
+    {% for t in topTasks %}
+    {{ taskRow(t) }}
+    {% else %}
+    <div class="erp-empty-cell">No pending tasks — you're all caught up.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

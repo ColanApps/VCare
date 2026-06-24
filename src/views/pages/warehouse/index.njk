@@ -1,0 +1,66 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Warehouse Dashboard') %}
+{% endcall %}
+{% if not warehouse %}
+<div class="erp-card mt-6"><div class="erp-card-body text-center text-amber-600 py-8">No warehouse branch configured. Add a branch with type WAREHOUSE (e.g. WH-CENTRAL).</div></div>
+{% else %}
+<p class="text-sm text-slate-500 mb-6">{{ warehouse.name }} ({{ warehouse.code }})</p>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  <div class="erp-kpi"><div class="erp-kpi-label">Total Units</div><div class="erp-kpi-value mt-1">{{ stats.totalUnits | number }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">SKUs in Stock</div><div class="erp-kpi-value mt-1">{{ stats.skuCount | number }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Stock Lines</div><div class="erp-kpi-value mt-1">{{ stats.stockLines | number }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Pending Dispatch</div><div class="erp-kpi-value mt-1 text-amber-600">{{ stats.pendingDispatch }}</div></div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header flex justify-between">
+      <h3 class="font-semibold">Low Stock Alert</h3>
+      <a href="/warehouse/stock" class="text-xs text-accent-600">View all</a>
+    </div>
+    <div class="overflow-x-auto">
+    <table class="erp-table text-sm">
+      <thead><tr><th>Product</th><th>Qty</th></tr></thead>
+      <tbody>
+        {% for s in lowStock %}
+        <tr><td>{{ s.product.name }}</td><td class="text-amber-600 font-medium">{{ s.quantity }}</td></tr>
+        {% else %}
+        <tr><td colspan="2" class="erp-empty-cell">Stock levels healthy</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header flex justify-between">
+      <h3 class="font-semibold">Recent Movements</h3>
+      <a href="/inventory/movements" class="text-xs text-accent-600">Full log</a>
+    </div>
+    <div class="overflow-x-auto">
+    <table class="erp-table text-sm">
+      <thead><tr><th>Product</th><th>Type</th><th>Qty</th><th>Date</th></tr></thead>
+      <tbody>
+        {% for m in recentMovements %}
+        <tr>
+          <td>{{ m.product.name }}</td>
+          <td><span class="erp-badge-neutral text-[10px]">{{ m.movementType }}</span></td>
+          <td class="{% if m.quantity < 0 %}text-red-600{% else %}text-emerald-600{% endif %}">{{ m.quantity }}</td>
+          <td class="text-xs text-slate-500">{{ m.createdAt | date }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<div class="mt-6">
+  <a href="/warehouse/dispatch" class="erp-btn-primary">Open Dispatch Queue →</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Day Sales', date | date) %}
+{% endcall %}
+
+<form method="GET" action="/dashboard/day-sales" class="erp-filter-bar mb-6">
+  <div class="erp-field">
+    <label class="erp-label">Date</label>
+    <input type="date" name="date" value="{{ dateIso }}" class="erp-input">
+  </div>
+  <button type="submit" class="erp-btn-secondary">Go</button>
+</form>
+
+<div class="erp-kpi px-6 py-3 mb-6 inline-block">
+  <div class="erp-kpi-label">Today's Total</div>
+  <div class="erp-kpi-value text-2xl">{{ total | currency }}</div>
+</div>
+
+<div class="erp-card erp-table-card">
+  <div class="erp-card-header">
+    <h3 class="font-semibold text-slate-900">Bills ({{ bills | length }})</h3>
+    <a href="/billing/create" class="erp-btn-primary text-xs">+ New Bill</a>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>Bill No</th>
+          <th>Time</th>
+          <th>Customer</th>
+          <th>Branch</th>
+          <th>Created By</th>
+          <th>Amount</th>
+          <th>Paid</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for bill in bills %}
+        <tr>
+          <td><a href="/billing/{{ bill.id }}" class="text-accent-600 hover:underline font-medium">{{ bill.billNo }}</a></td>
+          <td class="font-mono text-xs">{{ bill.billDate | datetime }}</td>
+          <td>
+            <a href="/customer/{{ bill.customer.id }}" class="hover:underline">{{ bill.customer.firstName }} {{ bill.customer.lastName }}</a>
+            <div class="text-[10px] text-slate-400">{{ bill.customer.uhid }}</div>
+          </td>
+          <td>{{ bill.branch.name }}</td>
+          <td>{{ bill.createdBy.firstName }} {{ bill.createdBy.lastName }}</td>
+          <td class="font-medium">{{ bill.totalAmount | currency }}</td>
+          <td>{{ bill.paidAmount | currency }}</td>
+          <td>{{ statusBadge(bill.status) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="erp-empty-cell">No bills recorded today</td></tr>
+        {% endfor %}
+      </tbody>
+      {% if bills | length > 0 %}
+      <tfoot>
+        <tr class="bg-slate-50 font-semibold">
+          <td colspan="5" class="text-right">Total</td>
+          <td>{{ total | currency }}</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+</div>
+</div>
+{% endblock %}

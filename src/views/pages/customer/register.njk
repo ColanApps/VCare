@@ -1,0 +1,81 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Customer Registration') %}
+{% endcall %}
+
+<div class="erp-card max-w-4xl">
+  <form method="POST" action="/customer/register" class="erp-card-body">
+    <div class="mb-6">
+      <h3 class="font-semibold text-slate-900 mb-4 pb-2 border-b border-surface-border">Personal Information</h3>
+      <div class="erp-form-grid">
+        <div><label class="erp-label">First Name *</label><input type="text" name="firstName" class="erp-input" required></div>
+        <div><label class="erp-label">Last Name *</label><input type="text" name="lastName" class="erp-input" required></div>
+        <div>
+          <label class="erp-label">Gender</label>
+          <select name="gender" class="erp-select">
+            <option value="">Select</option>
+            <option value="MALE">Male</option>
+            <option value="FEMALE">Female</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+        <div><label class="erp-label">Date of Birth</label><input type="date" name="dateOfBirth" class="erp-input"></div>
+        <div><label class="erp-label">Phone *</label><input type="tel" name="phone" class="erp-input" required></div>
+        <div><label class="erp-label">Alternate Phone</label><input type="tel" name="alternatePhone" class="erp-input"></div>
+        <div><label class="erp-label">Email</label><input type="email" name="email" class="erp-input"></div>
+        <div><label class="erp-label">Address</label><input type="text" name="address" class="erp-input"></div>
+      </div>
+    </div>
+
+    <div class="mb-6">
+      <h3 class="font-semibold text-slate-900 mb-4 pb-2 border-b border-surface-border">Clinic Details</h3>
+      <div class="erp-form-grid">
+        <div>
+          <label class="erp-label">Branch *</label>
+          <select name="branchId" class="erp-select" required>
+            {% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="erp-label">Category</label>
+          <select name="category" class="erp-select">
+            <option value="HAIR">Hair</option>
+            <option value="SKIN">Skin</option>
+          </select>
+        </div>
+        <div>
+          <label class="erp-label">Occupation</label>
+          <select name="occupationId" class="erp-select">
+            <option value="">Select</option>
+            {% for o in occupations %}<option value="{{ o.id }}">{{ o.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="erp-label">Known By</label>
+          <select name="knownById" class="erp-select">
+            <option value="">Select</option>
+            {% for k in knownBy %}<option value="{{ k.id }}">{{ k.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="erp-label">Lead Source</label>
+          <select name="leadSource" class="erp-select">
+            <option value="">Select</option>
+            <option value="WALK_IN">Walk-in</option>
+            <option value="REFERRAL">Referral</option>
+            <option value="ONLINE">Online</option>
+            <option value="CALL_CENTER">Call Center</option>
+            <option value="SOCIAL_MEDIA">Social Media</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex gap-3">
+      <button type="submit" class="erp-btn-primary">Register Customer</button>
+      <a href="/customer/search" class="erp-btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

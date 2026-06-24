@@ -1,0 +1,1737 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── RBAC & Organization ───────────────────────────────────────────────────
+
+model Role {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  level       Int      @default(0)
+  permissions RolePermission[]
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  module      String
+  action      String
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  @@id([roleId, permissionId])
+}
+
+model Zone {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  branches  Branch[]
+  createdAt DateTime @default(now())
+}
+
+model Branch {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  name         String
+  type         String   @default("HAIR") // HAIR, SKIN, PRP, AESTHETICS, MIXED
+  address      String?
+  cityId       String?
+  city         City?    @relation(fields: [cityId], references: [id])
+  zoneId       String?
+  zone         Zone?    @relation(fields: [zoneId], references: [id])
+  phone        String?
+  email        String?
+  isActive     Boolean  @default(true)
+  users        User[]
+  customers    Customer[]
+  appointments Appointment[]
+  bills        Bill[]
+  stocks       Stock[]
+  indents      Indent[]
+  targets      LocationTarget[]
+  tickets      Ticket[]
+  pettyCash    PettyCash[]
+  iouRequests  IOURequest[]
+  stockMovements StockMovement[]
+  clinicalConsumptions ClinicalConsumption[]
+  procedures       Procedure[]
+  stockTransfersFrom StockTransfer[] @relation("TransferFrom")
+  stockTransfersTo   StockTransfer[] @relation("TransferTo")
+  advanceReceipts AdvanceReceipt[]
+  customerVisits  CustomerVisit[]
+  cashDeposits    CashDeposit[]
+  stockOutwards   StockOutward[]
+  physicalAudits  PhysicalStockAudit[]
+  salesOrders     SalesOrder[]
+  workOrders      WorkOrder[]
+  biometricLogs   BiometricLog[]
+  locationTargetDays LocationTargetDay[]
+  ccLocationTargets  CCLocationTarget[]
+  dtrRecords      DTRRecord[]
+  dayCloses       DayClose[]
+  journalEntries  JournalEntry[]
+  manpowerReqs    ManpowerRequisition[]
+  investments     Investment[]
+  newJoinees      NewJoinee[]
+  documents       DocumentStore[]
+  factoryIndents  FactoryIndent[]
+  purchaseOrders  PurchaseOrder[]
+  grns            GRN[]
+  assets          Asset[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model OrgNode {
+  id           String    @id @default(cuid())
+  title        String
+  designation  String
+  department   String?
+  parentId     String?
+  parent       OrgNode?  @relation("OrgHierarchy", fields: [parentId], references: [id])
+  children     OrgNode[] @relation("OrgHierarchy")
+  userId       String?   @unique
+  user         User?     @relation(fields: [userId], references: [id])
+  sortOrder    Int       @default(0)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Designation {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  gradeId   String?
+  grade     Grade?   @relation(fields: [gradeId], references: [id])
+  users     User[]
+  createdAt DateTime @default(now())
+}
+
+model Grade {
+  id           String        @id @default(cuid())
+  code         String        @unique
+  name         String
+  level        Int           @default(1)
+  designations Designation[]
+  createdAt    DateTime      @default(now())
+}
+
+model User {
+  id             String    @id @default(cuid())
+  employeeId     String    @unique
+  email          String    @unique
+  passwordHash   String
+  firstName      String
+  lastName       String
+  phone          String?
+  roleId         String
+  role           Role      @relation(fields: [roleId], references: [id])
+  designationId  String?
+  designation    Designation? @relation(fields: [designationId], references: [id])
+  branchId       String?
+  branch         Branch?   @relation(fields: [branchId], references: [id])
+  orgNode        OrgNode?
+  isActive       Boolean   @default(true)
+  lastLoginAt    DateTime?
+  lastLoginIp    String?
+  sessions       UserSession[]
+  auditLogs      AuditLog[]
+  appointments   Appointment[] @relation("ConsultantAppointments")
+  consultations  Consultation[]
+  billsCreated   Bill[]    @relation("BillCreator")
+  ticketsCreated Ticket[]  @relation("TicketCreator")
+  ticketsAssigned Ticket[] @relation("TicketAssignee")
+  indentsCreated Indent[]  @relation("IndentCreator")
+  indentsApproved Indent[] @relation("IndentApprover")
+  iouRequests    IOURequest[] @relation("IOURequester")
+  iouApprovals   IOURequest[] @relation("IOUApprover")
+  biometricLogs  BiometricLog[]
+  dayClosesClosed DayClose[] @relation("DayCloseCloser")
+  dayClosesApproved DayClose[] @relation("DayCloseApprover")
+  incentivePayouts IncentivePayout[] @relation("IncentiveConsultant")
+  incentivePayoutsApproved IncentivePayout[] @relation("IncentiveApprover")
+  proceduresPerformed Procedure[] @relation("ProcedurePerformer")
+  advanceApplications AdvanceApplication[] @relation("AdvanceApplier")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model UserSession {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress String
+  userAgent String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+model IpWhitelist {
+  id          String   @id @default(cuid())
+  ipAddress   String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  module     String
+  entityType String?
+  entityId   String?
+  details    String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+}
+
+// ─── Geographical Masters ────────────────────────────────────────────────────
+
+model Country {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  states    State[]
+  createdAt DateTime @default(now())
+}
+
+model State {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  countryId String
+  country   Country  @relation(fields: [countryId], references: [id])
+  cities    City[]
+  createdAt DateTime @default(now())
+}
+
+model City {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  stateId   String
+  state     State    @relation(fields: [stateId], references: [id])
+  areas     Area[]
+  branches  Branch[]
+  createdAt DateTime @default(now())
+}
+
+model Area {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  cityId    String
+  city      City     @relation(fields: [cityId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Bank {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  name          String
+  accountNumber String?
+  ifscCode      String?
+  branchName    String?
+  createdAt     DateTime @default(now())
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  gstin     String?
+  address   String?
+  createdAt DateTime @default(now())
+}
+
+// ─── Treatment Masters ─────────────────────────────────────────────────────────
+
+model Therapist {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  specialty String?
+  branchId  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Treatment {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  category    String   @default("HAIR") // HAIR, SKIN
+  duration    Int      @default(60)
+  basePrice   Float    @default(0)
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  procedures  Procedure[]
+}
+
+model Diagnosis {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  category    String   @default("HAIR")
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+model Surgeon {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  specialty String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Occupation {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+}
+
+model KnownBy {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+}
+
+// ─── Targets ─────────────────────────────────────────────────────────────────
+
+model LocationTarget {
+  id        String   @id @default(cuid())
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  month     Int
+  year      Int
+  target    Float    @default(0)
+  achieved  Float    @default(0)
+  createdAt DateTime @default(now())
+  @@unique([branchId, month, year])
+}
+
+model ConsultantTarget {
+  id           String @id @default(cuid())
+  consultantId String
+  month        Int
+  year         Int
+  target       Float  @default(0)
+  achieved     Float  @default(0)
+  createdAt    DateTime @default(now())
+}
+
+// ─── Customer Module ─────────────────────────────────────────────────────────
+
+model Customer {
+  id            String   @id @default(cuid())
+  uhid          String   @unique
+  firstName     String
+  lastName      String
+  email         String?
+  phone         String
+  alternatePhone String?
+  gender        String?
+  dateOfBirth   DateTime?
+  occupationId  String?
+  knownById     String?
+  address       String?
+  cityId        String?
+  branchId      String
+  branch        Branch   @relation(fields: [branchId], references: [id])
+  leadSource    String?
+  category      String   @default("HAIR") // HAIR, SKIN
+  customerType  String   @default("INDIVIDUAL") // INDIVIDUAL, CORPORATE
+  companyName   String?
+  gstin         String?
+  status        String   @default("ACTIVE") // ACTIVE, INACTIVE, DISCONTINUED
+  registeredAt  DateTime @default(now())
+  appointments  Appointment[]
+  consultations Consultation[]
+  bills         Bill[]
+  procedures    Procedure[]
+  followUps     FollowUp[]
+  photos        CustomerPhoto[]
+  treatmentSlips TreatmentSlip[]
+  trichoscanTests TrichoscanTest[]
+  scheduleSteps SchedulePendingStep[]
+  advanceReceipts AdvanceReceipt[]
+  loanAccounts  LoanAccount[]
+  visits        CustomerVisit[]
+  treatmentFeedbacks TreatmentFeedback[]
+  customerTests CustomerTest[]
+  permanentRefunds PermanentRefund[]
+  cashDeposits  CashDeposit[]
+  salesOrders   SalesOrder[]
+  refundComplaints RefundComplaint[]
+  callAudits    CallAudit[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Consultation {
+  id           String   @id @default(cuid())
+  customerId   String
+  customer     Customer @relation(fields: [customerId], references: [id])
+  consultantId String
+  consultant   User     @relation(fields: [consultantId], references: [id])
+  type         String   @default("INITIAL") // INITIAL, REGULAR, FOLLOW_UP
+  chiefComplaint String?
+  diagnosis    String?
+  notes        String?
+  recommendations String?
+  status       String   @default("PENDING") // PENDING, COMPLETED
+  consultedAt  DateTime @default(now())
+  createdAt    DateTime @default(now())
+  treatmentSlips TreatmentSlip[]
+  trichoscanTests TrichoscanTest[]
+  scheduleSteps SchedulePendingStep[]
+}
+
+model CustomerPhoto {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  type       String   // BEFORE, AFTER, TRICHOSCAN, PROCEDURE_PRE, PROCEDURE_POST
+  filePath   String
+  caption    String?
+  takenAt    DateTime @default(now())
+  createdAt  DateTime @default(now())
+}
+
+// ─── Appointments ──────────────────────────────────────────────────────────────
+
+model Appointment {
+  id             String   @id @default(cuid())
+  appointmentNo  String   @unique
+  customerId     String
+  customer       Customer @relation(fields: [customerId], references: [id])
+  consultantId   String?
+  consultant     User?    @relation("ConsultantAppointments", fields: [consultantId], references: [id])
+  branchId       String
+  branch         Branch   @relation(fields: [branchId], references: [id])
+  treatmentId    String?
+  type           String   @default("CONSULTATION") // CONSULTATION, TREATMENT, PROCEDURE, FOLLOW_UP
+  category       String   @default("HAIR")
+  scheduledAt    DateTime
+  duration       Int      @default(30)
+  status         String   @default("SCHEDULED") // SCHEDULED, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW
+  leadSource     String?
+  campaign       String?
+  notes          String?
+  source         String   @default("WALK_IN") // WALK_IN, CALL_CENTER, ONLINE, REFERRAL
+  reminderSent   Boolean  @default(false)
+  procedures     Procedure[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Procedure {
+  id           String   @id @default(cuid())
+  procedureNo  String   @unique
+  customerId   String
+  customer     Customer @relation(fields: [customerId], references: [id])
+  branchId     String?
+  branch       Branch?  @relation(fields: [branchId], references: [id])
+  treatmentId  String?
+  treatment    Treatment? @relation(fields: [treatmentId], references: [id])
+  appointmentId String?
+  appointment  Appointment? @relation(fields: [appointmentId], references: [id])
+  performerId  String?
+  performer    User?    @relation("ProcedurePerformer", fields: [performerId], references: [id])
+  treatmentSlipId String?
+  treatmentSlip TreatmentSlip? @relation(fields: [treatmentSlipId], references: [id])
+  sessionNo    Int?
+  customerVisitId String? @unique
+  customerVisit CustomerVisit? @relation(fields: [customerVisitId], references: [id])
+  scheduledAt  DateTime
+  startedAt    DateTime?
+  completedAt  DateTime?
+  status       String   @default("BOOKED") // BOOKED, IN_PROGRESS, COMPLETED, CANCELLED
+  consentGiven Boolean  @default(false)
+  consentFormPath String?
+  consumptionApplied Boolean @default(false)
+  notes        String?
+  billId       String?  @unique
+  bill         Bill?    @relation("ProcedureBill", fields: [billId], references: [id])
+  pharmacyBillId String? @unique
+  pharmacyBill Bill?    @relation("ProcedurePharmacyBill", fields: [pharmacyBillId], references: [id])
+  createdAt    DateTime @default(now())
+}
+
+model SchedulePendingStep {
+  id             String   @id @default(cuid())
+  customerId     String
+  customer       Customer @relation(fields: [customerId], references: [id])
+  consultationId String?
+  consultation   Consultation? @relation(fields: [consultationId], references: [id])
+  step           String   // CONSULTATION, BEFORE_PHOTO, TRICHOSCAN, TREATMENT_SLIP, REGULAR_CONSULTATION, AFTER_PHOTO
+  status         String   @default("PENDING") // PENDING, COMPLETED, SKIPPED
+  completedAt    DateTime?
+  completedById  String?
+  notes          String?
+  createdAt      DateTime @default(now())
+  @@unique([customerId, consultationId, step])
+}
+
+model TreatmentSlip {
+  id             String   @id @default(cuid())
+  slipNo         String   @unique
+  customerId     String
+  customer       Customer @relation(fields: [customerId], references: [id])
+  consultationId String?
+  consultation   Consultation? @relation(fields: [consultationId], references: [id])
+  treatments     String   // JSON array of planned treatments
+  sessions       Int      @default(1)
+  sessionCadence String   @default("WEEKLY") // WEEKLY, MONTHLY, CUSTOM
+  cadenceDays    Int?
+  nextSessionDueAt DateTime?
+  lastSessionCompletedAt DateTime?
+  notes          String?
+  status         String   @default("ACTIVE")
+  createdById    String
+  procedures     Procedure[]
+  createdAt      DateTime @default(now())
+}
+
+model TrichoscanTest {
+  id             String   @id @default(cuid())
+  testNo         String   @unique
+  customerId     String
+  customer       Customer @relation(fields: [customerId], references: [id])
+  consultationId String?
+  consultation   Consultation? @relation(fields: [consultationId], references: [id])
+  hairDensity    Float?
+  hairDiameter   Float?
+  follicleCount  Int?
+  scalpCondition String?
+  findings       String?
+  recommendations String?
+  performedById  String
+  testedAt       DateTime @default(now())
+  createdAt      DateTime @default(now())
+}
+
+model FollowUp {
+  id           String   @id @default(cuid())
+  customerId   String
+  customer     Customer @relation(fields: [customerId], references: [id])
+  type         String   // PENDING_ADVANCE, SUPPLEMENTS, NOT_JOINED, TREATMENT, REGULAR
+  status       String   @default("PENDING")
+  scheduledAt  DateTime?
+  completedAt  DateTime?
+  feedback     String?
+  nextFollowUp DateTime?
+  assignedTo   String?
+  createdAt    DateTime @default(now())
+}
+
+// ─── Billing ───────────────────────────────────────────────────────────────────
+
+model Bill {
+  id            String     @id @default(cuid())
+  billNo        String     @unique
+  customerId    String
+  customer      Customer   @relation(fields: [customerId], references: [id])
+  branchId      String
+  branch        Branch     @relation(fields: [branchId], references: [id])
+  createdById   String
+  createdBy     User       @relation("BillCreator", fields: [createdById], references: [id])
+  billDate      DateTime   @default(now())
+  subtotal      Float      @default(0)
+  discount      Float      @default(0)
+  taxAmount     Float      @default(0)
+  totalAmount   Float      @default(0)
+  paidAmount    Float      @default(0)
+  balanceAmount Float      @default(0)
+  status        String     @default("DRAFT") // DRAFT, PENDING, PARTIAL, PAID, CANCELLED, REFUNDED
+  billType      String     @default("SERVICE") // SERVICE, PHARMACY, PRODUCT
+  paymentMode   String?
+  items         BillItem[]
+  payments      Payment[]
+  creditNotes   CreditNote[]
+  loanAccounts  LoanAccount[]
+  source        String     @default("CENTER") // CENTER, ONLINE, B2B
+  buyerGstin    String?
+  poReference   String?
+  grnId         String?    @unique
+  grn           GRN?       @relation(fields: [grnId], references: [id])
+  onlineOrderId String?    @unique
+  maintenanceLogs BillMaintenanceLog[]
+  linkedProcedure Procedure? @relation("ProcedureBill")
+  pharmacyProcedure Procedure? @relation("ProcedurePharmacyBill")
+  advanceApplications AdvanceApplication[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model BillItem {
+  id          String  @id @default(cuid())
+  billId      String
+  bill        Bill    @relation(fields: [billId], references: [id], onDelete: Cascade)
+  itemType    String  // SERVICE, PRODUCT
+  itemCode    String
+  itemName    String
+  quantity    Int     @default(1)
+  unitPrice   Float
+  discount    Float   @default(0)
+  taxRate     Float   @default(18)
+  taxAmount   Float   @default(0)
+  totalAmount Float
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  billId        String
+  bill          Bill     @relation(fields: [billId], references: [id])
+  amount        Float
+  paymentMode   String   // CASH, CARD, UPI, LOAN, ADVANCE
+  referenceNo   String?
+  paymentDate   DateTime @default(now())
+  notes         String?
+  createdAt     DateTime @default(now())
+}
+
+model CreditNote {
+  id          String   @id @default(cuid())
+  creditNoteNo String  @unique
+  billId      String
+  bill        Bill     @relation(fields: [billId], references: [id])
+  amount      Float
+  reason      String
+  type        String   @default("REFUND") // REFUND, CREDIT_NOTE, CANCELLATION
+  status      String   @default("ISSUED") // ISSUED, PROCESSED
+  createdById String
+  createdAt   DateTime @default(now())
+}
+
+// ─── Inventory & Purchase ──────────────────────────────────────────────────────
+
+model Vendor {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  type      String   @default("BILLABLE") // BILLABLE, CLINICAL
+  contact   String?
+  email     String?
+  phone     String?
+  gstin     String?
+  address   String?
+  paymentTerms String?
+  creditDays   Int?
+  bankName     String?
+  bankAccount  String?
+  isActive  Boolean  @default(true)
+  products  Product[]
+  pos       PurchaseOrder[]
+  workOrders WorkOrder[]
+  assetPOs   AssetPurchaseOrder[]
+  createdAt DateTime @default(now())
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  sku         String   @unique
+  name        String
+  type        String   @default("BILLABLE") // BILLABLE, CLINICAL
+  category    String?
+  hsnCode     String?
+  sacCode     String?
+  unit        String   @default("PCS")
+  mrp         Float    @default(0)
+  costPrice   Float    @default(0)
+  taxRate     Float    @default(18)
+  vendorId    String?
+  vendor      Vendor?  @relation(fields: [vendorId], references: [id])
+  reorderLevel Int     @default(10)
+  isActive    Boolean  @default(true)
+  stocks      Stock[]
+  poItems     POItem[]
+  indentItems IndentItem[]
+  stockMovements StockMovement[]
+  clinicalConsumptions ClinicalConsumption[]
+  grnItems    GRNItem[]
+  stockTransferItems StockTransferItem[]
+  stockOutwardItems  StockOutwardItem[]
+  physicalAudits     PhysicalStockAudit[]
+  salesOrderItems    SalesOrderItem[]
+  factoryIndentItems FactoryIndentItem[]
+  workOrderItems     WorkOrderItem[]
+  productBatches     ProductBatch[]
+  procedureConsumptions ProcedureConsumption[]
+  createdAt   DateTime @default(now())
+}
+
+model Stock {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  branchId   String
+  branch     Branch   @relation(fields: [branchId], references: [id])
+  batchNo    String?
+  quantity   Int      @default(0)
+  expiryDate DateTime?
+  updatedAt  DateTime @updatedAt
+  @@unique([productId, branchId, batchNo])
+}
+
+model PurchaseOrder {
+  id              String   @id @default(cuid())
+  poNo            String   @unique
+  vendorId        String
+  vendor          Vendor   @relation(fields: [vendorId], references: [id])
+  orderType       String   @default("STANDARD") // STANDARD, AESTHETICS, FACTORY, ASSET
+  branchId        String?
+  branch          Branch?  @relation(fields: [branchId], references: [id])
+  factoryIndentId String?
+  factoryIndent   FactoryIndent? @relation(fields: [factoryIndentId], references: [id])
+  status          String   @default("DRAFT") // DRAFT, PENDING_AUTH, APPROVED, PARTIAL, RECEIVED, CANCELLED
+  orderDate       DateTime @default(now())
+  expectedDate    DateTime?
+  totalAmount     Float    @default(0)
+  notes           String?
+  items           POItem[]
+  grns            GRN[]
+  createdAt       DateTime @default(now())
+}
+
+model POItem {
+  id        String        @id @default(cuid())
+  poId      String
+  po        PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product       @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Float
+  received  Int           @default(0)
+  totalAmount Float
+}
+
+model GRN {
+  id              String        @id @default(cuid())
+  grnNo           String        @unique
+  poId            String
+  po              PurchaseOrder @relation(fields: [poId], references: [id])
+  grnType         String        @default("STANDARD") // STANDARD, AESTHETICS, FACTORY, ASSET
+  branchId        String?
+  branch          Branch?       @relation(fields: [branchId], references: [id])
+  factoryIndentId String?
+  factoryIndent   FactoryIndent? @relation(fields: [factoryIndentId], references: [id])
+  receivedDate    DateTime      @default(now())
+  status          String        @default("PENDING") // PENDING, QUALITY_CHECK, ACCEPTED, REJECTED
+  notes           String?
+  items           GRNItem[]
+  bill            Bill?
+  createdAt       DateTime      @default(now())
+}
+
+model GRNItem {
+  id            String    @id @default(cuid())
+  grnId         String
+  grn           GRN       @relation(fields: [grnId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product   @relation(fields: [productId], references: [id])
+  quantity      Int
+  batchNo       String?
+  branchId      String?
+  qualityStatus String    @default("PENDING") // PENDING, PASSED, FAILED
+  qualityNotes  String?
+  expiryDate    DateTime?
+}
+
+model Indent {
+  id          String       @id @default(cuid())
+  indentNo    String       @unique
+  branchId    String
+  branch      Branch       @relation(fields: [branchId], references: [id])
+  type        String       @default("BILLABLE") // BILLABLE, CLINICAL
+  status      String       @default("PENDING") // PENDING, APPROVED, REJECTED, FULFILLED, PARTIAL
+  createdById String
+  createdBy   User         @relation("IndentCreator", fields: [createdById], references: [id])
+  approvedById String?
+  approvedBy  User?        @relation("IndentApprover", fields: [approvedById], references: [id])
+  approvedAt  DateTime?
+  notes       String?
+  sourceType  String       @default("MANUAL") // MANUAL, AUTO_REORDER
+  triggerRef  String?
+  items       IndentItem[]
+  workOrder   WorkOrder?
+  createdAt   DateTime     @default(now())
+}
+
+model IndentItem {
+  id        String  @id @default(cuid())
+  indentId  String
+  indent    Indent  @relation(fields: [indentId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  fulfilled Int     @default(0)
+}
+
+model StockMovement {
+  id            String   @id @default(cuid())
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id])
+  branchId      String
+  branch        Branch   @relation(fields: [branchId], references: [id])
+  movementType  String   // INWARD, OUTWARD, ADJUSTMENT, INDENT_FULFILL, GRN_RECEIPT, CONSUMPTION
+  quantity      Int
+  batchNo       String?
+  referenceType String?  // GRN, INDENT, BILL, MANUAL
+  referenceId   String?
+  notes         String?
+  createdById   String?
+  createdAt     DateTime @default(now())
+}
+
+model ClinicalConsumption {
+  id          String   @id @default(cuid())
+  branchId    String
+  branch      Branch   @relation(fields: [branchId], references: [id])
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  quantity    Int
+  customerId  String?
+  procedureId String?
+  billId      String?
+  notes       String?
+  consumedById String
+  consumedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
+
+// ─── Discounts & Schemes ───────────────────────────────────────────────────────
+
+model DiscountRule {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  name            String
+  type            String   // PRODUCT, SERVICE
+  category        String   @default("ALL") // HAIR, SKIN, ALL
+  targetScope     String   @default("ALL") // ALL, SPECIFIC
+  targetId        String?
+  discountPercent Float
+  maxAmount       Float?
+  isActive        Boolean  @default(true)
+  validFrom       DateTime?
+  validTo         DateTime?
+  createdAt       DateTime @default(now())
+}
+
+model SchemeOffer {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  name            String
+  itemType        String   // PRODUCT, SERVICE
+  category        String   @default("ALL")
+  itemCode        String?
+  discountPercent Float
+  validFrom       DateTime
+  validTo         DateTime
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+}
+
+model MaxDiscountLimit {
+  id         String @id @default(cuid())
+  type       String // PRODUCT, SERVICE
+  category   String // HAIR, SKIN, ALL
+  maxPercent Float
+  createdAt  DateTime @default(now())
+  @@unique([type, category])
+}
+
+// ─── Advances & Loans ─────────────────────────────────────────────────────────
+
+model AdvanceReceipt {
+  id            String   @id @default(cuid())
+  receiptNo     String   @unique
+  customerId    String
+  customer      Customer @relation(fields: [customerId], references: [id])
+  branchId      String
+  branch        Branch   @relation(fields: [branchId], references: [id])
+  amount        Float
+  usedAmount    Float    @default(0)
+  balanceAmount Float
+  paymentMode   String   @default("CASH")
+  status        String   @default("ACTIVE") // ACTIVE, EXHAUSTED, REFUNDED
+  notes         String?
+  createdById   String
+  createdAt     DateTime @default(now())
+  applications  AdvanceApplication[]
+}
+
+model AdvanceApplication {
+  id          String         @id @default(cuid())
+  advanceId   String
+  advance     AdvanceReceipt @relation(fields: [advanceId], references: [id])
+  billId      String
+  bill        Bill           @relation(fields: [billId], references: [id])
+  amount      Float
+  appliedById String
+  appliedBy   User           @relation("AdvanceApplier", fields: [appliedById], references: [id])
+  appliedAt   DateTime       @default(now())
+}
+
+model LoanAccount {
+  id            String   @id @default(cuid())
+  loanNo        String   @unique
+  customerId    String
+  customer      Customer @relation(fields: [customerId], references: [id])
+  billId        String?
+  bill          Bill?    @relation(fields: [billId], references: [id])
+  principal     Float
+  interestRate  Float    @default(12)
+  tenureMonths  Int      @default(6)
+  emiAmount     Float
+  totalPayable  Float
+  paidAmount    Float    @default(0)
+  status        String   @default("PENDING") // PENDING, APPROVED, ACTIVE, CLOSED, REJECTED
+  approvedById  String?
+  approvedAt    DateTime?
+  provider      String   @default("INTERNAL") // INTERNAL, BAJAJ
+  externalRefNo String?
+  providerApplicationId String?
+  providerStatus String?
+  installments  LoanInstallment[]
+  createdAt     DateTime @default(now())
+}
+
+model LoanInstallment {
+  id            String      @id @default(cuid())
+  loanId        String
+  loan          LoanAccount @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  installmentNo Int
+  dueDate       DateTime
+  amount        Float
+  paidAmount    Float       @default(0)
+  status        String      @default("PENDING") // PENDING, PAID, OVERDUE
+  paidAt        DateTime?
+  createdAt     DateTime    @default(now())
+  @@unique([loanId, installmentNo])
+}
+
+// ─── Stock Transfer (STO) ────────────────────────────────────────────────────
+
+model StockTransfer {
+  id            String   @id @default(cuid())
+  transferNo    String   @unique
+  fromBranchId  String
+  fromBranch    Branch   @relation("TransferFrom", fields: [fromBranchId], references: [id])
+  toBranchId    String
+  toBranch      Branch   @relation("TransferTo", fields: [toBranchId], references: [id])
+  status        String   @default("PENDING") // PENDING, APPROVED, IN_TRANSIT, COMPLETED, REJECTED
+  notes         String?
+  createdById   String
+  approvedById  String?
+  approvedAt    DateTime?
+  completedAt   DateTime?
+  items         StockTransferItem[]
+  createdAt     DateTime @default(now())
+}
+
+model StockTransferItem {
+  id          String        @id @default(cuid())
+  transferId  String
+  transfer    StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product       @relation(fields: [productId], references: [id])
+  quantity    Int
+  transferred Int           @default(0)
+}
+
+// ─── Support & Operations ─────────────────────────────────────────────────────
+
+model Ticket {
+  id           String   @id @default(cuid())
+  ticketNo     String   @unique
+  title        String
+  description  String
+  category     String   @default("IT")
+  priority     String   @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
+  status       String   @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  branchId     String?
+  branch       Branch?  @relation(fields: [branchId], references: [id])
+  createdById  String
+  createdBy    User     @relation("TicketCreator", fields: [createdById], references: [id])
+  assignedToId String?
+  assignedTo   User?    @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  resolvedAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model IOURequest {
+  id           String   @id @default(cuid())
+  requestNo    String   @unique
+  requesterId  String
+  requester    User     @relation("IOURequester", fields: [requesterId], references: [id])
+  branchId     String?
+  branch       Branch?  @relation(fields: [branchId], references: [id])
+  amount       Float
+  purpose      String
+  status       String   @default("PENDING") // PENDING, APPROVED, REJECTED, SETTLED
+  approvedById String?
+  approvedBy   User?    @relation("IOUApprover", fields: [approvedById], references: [id])
+  approvedAt   DateTime?
+  settledAt       DateTime?
+  attachmentPath  String?
+  createdAt       DateTime @default(now())
+}
+
+model PettyCash {
+  id          String   @id @default(cuid())
+  entryNo     String   @unique
+  branchId    String
+  branch      Branch   @relation(fields: [branchId], references: [id])
+  amount      Float
+  category    String
+  description String
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  entryDate       DateTime @default(now())
+  attachmentPath  String?
+  createdAt       DateTime @default(now())
+}
+
+model NotificationLog {
+  id        String   @id @default(cuid())
+  type      String   // SMS, EMAIL
+  recipient String
+  subject   String?
+  message   String
+  status    String   @default("SENT")
+  module    String?
+  entityId  String?
+  createdAt DateTime @default(now())
+}
+
+model EmailConfig {
+  id       String  @id @default(cuid())
+  host     String
+  port     Int     @default(587)
+  username String
+  password String
+  fromEmail String
+  isActive Boolean @default(true)
+}
+
+model SmsConfig {
+  id        String  @id @default(cuid())
+  provider  String
+  apiKey    String
+  senderId  String
+  isActive  Boolean @default(true)
+}
+
+model OnlineOrder {
+  id          String   @id @default(cuid())
+  orderNo     String   @unique
+  customerName String
+  customerEmail String?
+  customerPhone String
+  items       String   // JSON string
+  subtotal    Float
+  taxAmount   Float
+  totalAmount Float
+  paymentStatus String @default("PAID")
+  status      String   @default("PENDING") // PENDING, INVOICED, FAILED
+  billId      String?
+  errorMessage String?
+  createdAt   DateTime @default(now())
+}
+
+// ─── Treatment Module ──────────────────────────────────────────────────────────
+
+model CustomerVisit {
+  id             String   @id @default(cuid())
+  visitNo        String   @unique
+  customerId     String
+  customer       Customer @relation(fields: [customerId], references: [id])
+  branchId       String
+  branch         Branch   @relation(fields: [branchId], references: [id])
+  consultantId   String?
+  visitType      String   @default("TREATMENT")
+  sessionNo      Int      @default(1)
+  treatmentNotes String?
+  status         String   @default("COMPLETED")
+  visitedAt      DateTime @default(now())
+  createdById    String
+  procedure      Procedure?
+  feedback       TreatmentFeedback?
+  createdAt      DateTime @default(now())
+}
+
+model TreatmentFeedback {
+  id          String        @id @default(cuid())
+  visitId     String        @unique
+  visit       CustomerVisit @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  customerId  String
+  customer    Customer      @relation(fields: [customerId], references: [id])
+  rating      Int?
+  feedback    String?
+  filePath    String?
+  submittedAt DateTime      @default(now())
+  createdById String
+}
+
+model CustomerTest {
+  id              String   @id @default(cuid())
+  testNo          String   @unique
+  customerId      String
+  customer        Customer @relation(fields: [customerId], references: [id])
+  type            String   // HMA, DSA
+  status          String   @default("PENDING")
+  testData        String?
+  findings        String?
+  recommendations String?
+  performedById   String
+  testedAt        DateTime @default(now())
+  createdAt       DateTime @default(now())
+}
+
+// ─── Bill Maintenance & Deposits ───────────────────────────────────────────────
+
+model PermanentRefund {
+  id           String   @id @default(cuid())
+  refundNo     String   @unique
+  customerId   String
+  customer     Customer @relation(fields: [customerId], references: [id])
+  billId       String?
+  amount       Float
+  reason       String
+  status       String   @default("PENDING")
+  approvedById String?
+  createdById     String
+  attachmentPath  String?
+  createdAt       DateTime @default(now())
+}
+
+model CashDeposit {
+  id          String   @id @default(cuid())
+  depositNo   String   @unique
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id])
+  branchId    String
+  branch      Branch   @relation(fields: [branchId], references: [id])
+  amount      Float
+  purpose     String?
+  paymentMode String   @default("CASH")
+  status      String   @default("ACTIVE")
+  proofPath   String?
+  createdById String
+  createdAt   DateTime @default(now())
+}
+
+model BillMaintenanceLog {
+  id          String   @id @default(cuid())
+  billId      String
+  bill        Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
+  action      String
+  oldValue    String?
+  newValue    String?
+  reason      String?
+  changedById String
+  createdAt   DateTime @default(now())
+}
+
+// ─── Stock Outward & Physical Audit ────────────────────────────────────────────
+
+model StockOutward {
+  id             String   @id @default(cuid())
+  outwardNo      String   @unique
+  branchId       String
+  branch         Branch   @relation(fields: [branchId], references: [id])
+  stockType      String   @default("BILLABLE")
+  status         String   @default("PENDING")
+  destination    String?
+  notes          String?
+  createdById    String
+  authorizedById String?
+  authorizedAt   DateTime?
+  items          StockOutwardItem[]
+  createdAt      DateTime @default(now())
+}
+
+model StockOutwardItem {
+  id        String       @id @default(cuid())
+  outwardId String
+  outward   StockOutward @relation(fields: [outwardId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product      @relation(fields: [productId], references: [id])
+  quantity  Int
+}
+
+model PhysicalStockAudit {
+  id          String   @id @default(cuid())
+  auditNo     String   @unique
+  branchId    String
+  branch      Branch   @relation(fields: [branchId], references: [id])
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  systemQty   Int
+  physicalQty Int
+  variance    Int
+  notes       String?
+  auditedById String
+  auditedAt   DateTime @default(now())
+}
+
+// ─── Sales Order Chain ─────────────────────────────────────────────────────────
+
+model SalesOrder {
+  id               String   @id @default(cuid())
+  orderNo          String   @unique
+  customerId       String
+  customer         Customer @relation(fields: [customerId], references: [id])
+  branchId         String
+  branch           Branch   @relation(fields: [branchId], references: [id])
+  status           String   @default("DRAFT")
+  totalAmount      Float    @default(0)
+  notes            String?
+  billId           String?
+  items            SalesOrderItem[]
+  deliveryChallans DeliveryChallan[]
+  createdById      String
+  createdAt        DateTime @default(now())
+}
+
+model SalesOrderItem {
+  id          String     @id @default(cuid())
+  orderId     String
+  order       SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product    @relation(fields: [productId], references: [id])
+  quantity    Int
+  unitPrice   Float
+  totalAmount Float
+}
+
+model DeliveryChallan {
+  id          String     @id @default(cuid())
+  challanNo   String     @unique
+  orderId     String
+  order       SalesOrder @relation(fields: [orderId], references: [id])
+  status      String     @default("ISSUED")
+  deliveredAt DateTime?
+  notes       String?
+  createdById String
+  createdAt   DateTime   @default(now())
+}
+
+// ─── Work Orders ─────────────────────────────────────────────────────────────────
+
+model WorkOrder {
+  id             String          @id @default(cuid())
+  woNo           String          @unique
+  branchId       String
+  branch         Branch          @relation(fields: [branchId], references: [id])
+  vendorId       String?
+  vendor         Vendor?         @relation(fields: [vendorId], references: [id])
+  indentId       String?         @unique
+  indent         Indent?         @relation(fields: [indentId], references: [id])
+  description    String?
+  status         String          @default("PENDING_AUTH") // PENDING_AUTH, APPROVED, IN_PROGRESS, COMPLETED, CANCELLED
+  notes          String?
+  items          WorkOrderItem[]
+  createdById    String
+  authorizedById String?
+  authorizedAt   DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime        @default(now())
+}
+
+model WorkOrderItem {
+  id          String    @id @default(cuid())
+  workOrderId String
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product?  @relation(fields: [productId], references: [id])
+  description String?
+  quantity    Int       @default(1)
+  unitCost    Float     @default(0)
+}
+
+// ─── Biometric Attendance ──────────────────────────────────────────────────────
+
+model BiometricLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  punchType String   // IN, OUT
+  punchedAt DateTime @default(now())
+  deviceId  String?
+  source    String   @default("MANUAL") // MANUAL, DEVICE
+  notes     String?
+}
+
+// ─── Extended Masters & Operations ─────────────────────────────────────────────
+
+model Courier {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  contact   String?
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Transporter {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  contact   String?
+  phone     String?
+  gstin     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model DeliveryAt {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  address   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model ProductBatch {
+  id         String    @id @default(cuid())
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id])
+  batchNo    String
+  stockType  String    @default("BILLABLE")
+  mfgDate    DateTime?
+  expiryDate DateTime?
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  @@unique([productId, batchNo])
+}
+
+model ConsultantTargetDay {
+  id           String   @id @default(cuid())
+  consultantId String
+  targetDate   DateTime
+  target       Float    @default(0)
+  achieved     Float    @default(0)
+  createdAt    DateTime @default(now())
+}
+
+model LocationTargetDay {
+  id         String   @id @default(cuid())
+  branchId   String
+  branch     Branch   @relation(fields: [branchId], references: [id])
+  targetDate DateTime
+  target     Float    @default(0)
+  achieved   Float    @default(0)
+  createdAt  DateTime @default(now())
+}
+
+model HeadsTarget {
+  id        String   @id @default(cuid())
+  userId    String
+  month     Int
+  year      Int
+  target    Float    @default(0)
+  achieved  Float    @default(0)
+  createdAt DateTime @default(now())
+}
+
+model CCAgentTarget {
+  id        String   @id @default(cuid())
+  agentId   String
+  month     Int
+  year      Int
+  target    Float    @default(0)
+  achieved  Float    @default(0)
+  createdAt DateTime @default(now())
+}
+
+model CCLocationTarget {
+  id        String   @id @default(cuid())
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  month     Int
+  year      Int
+  target    Float    @default(0)
+  achieved  Float    @default(0)
+  createdAt DateTime @default(now())
+}
+
+model TherapistIncentiveRule {
+  id        String   @id @default(cuid())
+  therapistId String?
+  category  String   @default("HAIR")
+  ratePercent Float  @default(0)
+  flatAmount  Float  @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model ProcedureConsumption {
+  id            String  @id @default(cuid())
+  procedureType String
+  productId     String
+  product       Product @relation(fields: [productId], references: [id])
+  quantity      Int     @default(1)
+  isActive      Boolean @default(true)
+}
+
+model OTMaster {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Banner {
+  id        String   @id @default(cuid())
+  title     String
+  category  String   @default("SKIN")
+  imagePath String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model ClinicalTreatment {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  category  String   @default("SKIN")
+  basePrice Float    @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model DTRRecord {
+  id          String   @id @default(cuid())
+  dtrNo       String   @unique
+  branchId    String
+  branch      Branch   @relation(fields: [branchId], references: [id])
+  recordDate  DateTime @default(now())
+  openingCash Float    @default(0)
+  closingCash Float    @default(0)
+  notes       String?
+  createdById String
+  createdAt   DateTime @default(now())
+}
+
+model ManpowerRequisition {
+  id            String   @id @default(cuid())
+  reqNo         String   @unique
+  branchId      String
+  branch        Branch   @relation(fields: [branchId], references: [id])
+  designation   String
+  headcount     Int      @default(1)
+  reason        String?
+  status        String   @default("PENDING")
+  createdById   String
+  createdAt     DateTime @default(now())
+}
+
+model Investment {
+  id          String   @id @default(cuid())
+  invNo       String   @unique
+  branchId    String?
+  branch      Branch?  @relation(fields: [branchId], references: [id])
+  category    String
+  amount      Float
+  description String?
+  investedAt  DateTime @default(now())
+  createdById String
+  createdAt   DateTime @default(now())
+}
+
+model NewJoinee {
+  id           String   @id @default(cuid())
+  employeeId   String   @unique
+  firstName    String
+  lastName     String
+  designation  String?
+  branchId     String?
+  branch       Branch?  @relation(fields: [branchId], references: [id])
+  joiningDate  DateTime?
+  status       String   @default("PENDING")
+  formData     String?
+  createdAt    DateTime @default(now())
+}
+
+model DocumentStore {
+  id           String   @id @default(cuid())
+  title        String
+  category     String   @default("GENERAL")
+  filePath     String?
+  branchId     String?
+  branch       Branch?  @relation(fields: [branchId], references: [id])
+  uploadedById String
+  createdAt    DateTime @default(now())
+}
+
+model RefundComplaint {
+  id          String   @id @default(cuid())
+  complaintNo String   @unique
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id])
+  billId      String?
+  complaint   String
+  status      String   @default("OPEN")
+  createdById String
+  createdAt   DateTime @default(now())
+}
+
+model CallAudit {
+  id          String   @id @default(cuid())
+  auditNo     String   @unique
+  agentId     String?
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id])
+  callType    String   @default("OUTBOUND")
+  score       Int?
+  findings    String?
+  genuinity   String?
+  auditedAt   DateTime @default(now())
+  auditedById String
+  createdAt   DateTime @default(now())
+}
+
+model AssetCategory {
+  id        String  @id @default(cuid())
+  code      String  @unique
+  name      String
+  assets    Asset[]
+  isActive  Boolean @default(true)
+}
+
+model Asset {
+  id           String        @id @default(cuid())
+  assetNo      String        @unique
+  categoryId   String
+  category     AssetCategory @relation(fields: [categoryId], references: [id])
+  name         String
+  branchId     String?
+  branch       Branch?       @relation(fields: [branchId], references: [id])
+  status       String        @default("ACTIVE")
+  purchaseDate DateTime?
+  value        Float         @default(0)
+  barcode      String?
+  movements    AssetMovement[]
+  createdAt    DateTime      @default(now())
+}
+
+model AssetMovement {
+  id           String   @id @default(cuid())
+  assetId      String
+  asset        Asset    @relation(fields: [assetId], references: [id])
+  movementType String
+  fromBranchId String?
+  toBranchId   String?
+  status       String   @default("PENDING")
+  notes        String?
+  createdById  String
+  createdAt    DateTime @default(now())
+}
+
+model KitMapping {
+  id        String   @id @default(cuid())
+  kitCode   String   @unique
+  name      String
+  mapType   String   @default("M2O")
+  itemsJson String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model ReimbursementClaim {
+  id          String   @id @default(cuid())
+  claimNo     String   @unique
+  requesterId String
+  amount      Float
+  purpose     String
+  status      String   @default("PENDING")
+  receiptPath String?
+  createdAt   DateTime @default(now())
+}
+
+model IncentiveUpload {
+  id           String   @id @default(cuid())
+  periodMonth  Int
+  periodYear   Int
+  filePath     String?
+  notes        String?
+  status       String   @default("PENDING") // PENDING, CALCULATED, APPROVED, PAID
+  totalAmount  Float    @default(0)
+  uploadedById String
+  createdAt    DateTime @default(now())
+  payouts      IncentivePayout[]
+}
+
+model IncentivePayout {
+  id            String          @id @default(cuid())
+  payoutNo      String          @unique
+  uploadId      String?
+  upload        IncentiveUpload? @relation(fields: [uploadId], references: [id])
+  consultantId  String
+  consultant    User            @relation("IncentiveConsultant", fields: [consultantId], references: [id])
+  periodMonth   Int
+  periodYear    Int
+  amount        Float
+  status        String          @default("CALCULATED") // CALCULATED, APPROVED, PAID
+  approvedById  String?
+  approvedBy    User?           @relation("IncentiveApprover", fields: [approvedById], references: [id])
+  paidAt        DateTime?
+  paymentRef    String?
+  createdAt     DateTime        @default(now())
+}
+
+model DayClose {
+  id               String   @id @default(cuid())
+  closeNo          String   @unique
+  branchId         String
+  branch           Branch   @relation(fields: [branchId], references: [id])
+  closeDate        DateTime
+  billsTotal       Float    @default(0)
+  collectionsTotal Float    @default(0)
+  cashCollections  Float    @default(0)
+  cardCollections  Float    @default(0)
+  upiCollections   Float    @default(0)
+  bankCollections  Float    @default(0)
+  depositsTotal    Float    @default(0)
+  pettyTotal       Float    @default(0)
+  refundsTotal     Float    @default(0)
+  systemCash       Float    @default(0)
+  physicalCash     Float    @default(0)
+  variance         Float    @default(0)
+  dtrId            String?
+  gstOutput        Float    @default(0)
+  status           String   @default("DRAFT") // DRAFT, SUBMITTED, APPROVED, LOCKED
+  notes            String?
+  closedById       String
+  closedBy         User     @relation("DayCloseCloser", fields: [closedById], references: [id])
+  approvedById     String?
+  approvedBy       User?    @relation("DayCloseApprover", fields: [approvedById], references: [id])
+  approvedAt       DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([branchId, closeDate])
+}
+
+model FactoryIndent {
+  id            String              @id @default(cuid())
+  indentNo      String              @unique
+  branchId      String
+  branch        Branch              @relation(fields: [branchId], references: [id])
+  status        String              @default("PENDING") // PENDING, APPROVED, REJECTED, FULFILLED, PARTIAL
+  notes         String?
+  itemsJson     String?
+  items         FactoryIndentItem[]
+  purchaseOrders PurchaseOrder[]
+  grns          GRN[]
+  createdById   String
+  approvedById  String?
+  approvedAt    DateTime?
+  createdAt     DateTime            @default(now())
+}
+
+model FactoryIndentItem {
+  id        String        @id @default(cuid())
+  indentId  String
+  indent    FactoryIndent @relation(fields: [indentId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product       @relation(fields: [productId], references: [id])
+  quantity  Int
+  fulfilled Int           @default(0)
+}
+
+model AssetPurchaseOrder {
+  id          String         @id @default(cuid())
+  apoNo       String         @unique
+  vendorId    String?
+  vendor      Vendor?        @relation(fields: [vendorId], references: [id])
+  branchId    String?
+  status      String         @default("PENDING_AUTH")
+  totalAmount Float          @default(0)
+  notes       String?
+  items       AssetPOItem[]
+  createdById String
+  createdAt   DateTime       @default(now())
+}
+
+model AssetPOItem {
+  id          String             @id @default(cuid())
+  apoId       String
+  apo         AssetPurchaseOrder @relation(fields: [apoId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Int                @default(1)
+  unitCost    Float              @default(0)
+  totalAmount Float              @default(0)
+}
+
+// ─── General Ledger (Debit / Credit) ─────────────────────────────────────────
+
+model ChartOfAccount {
+  id          String        @id @default(cuid())
+  code        String        @unique
+  name        String
+  accountType String        // ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE
+  normalSide  String        // DEBIT, CREDIT
+  branchId    String?
+  isActive    Boolean       @default(true)
+  journalLines JournalLine[]
+  createdAt   DateTime      @default(now())
+}
+
+model JournalEntry {
+  id          String        @id @default(cuid())
+  entryNo     String        @unique
+  branchId    String
+  branch      Branch        @relation(fields: [branchId], references: [id])
+  entryDate   DateTime      @default(now())
+  sourceType  String        // PAYMENT, BILL, REFUND, ADVANCE, PETTY_CASH
+  sourceId    String
+  description String?
+  status      String        @default("POSTED")
+  createdById String?
+  lines       JournalLine[]
+  createdAt   DateTime      @default(now())
+}
+
+model JournalLine {
+  id             String         @id @default(cuid())
+  journalEntryId String
+  journalEntry   JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  accountId      String
+  account        ChartOfAccount @relation(fields: [accountId], references: [id])
+  debit          Float          @default(0)
+  credit         Float          @default(0)
+  memo           String?
+}

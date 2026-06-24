@@ -1,0 +1,11 @@
+{% if breadcrumbs and breadcrumbs.length > 1 %}
+<nav class="erp-breadcrumb mb-5 text-sm">
+  {% for crumb in breadcrumbs %}
+    {% if not loop.last %}
+      {% if crumb.path %}<a href="{{ crumb.path }}" class="text-slate-400 hover:text-brand-600 transition-colors">{{ crumb.label }}</a><span class="text-slate-300 mx-1.5">/</span>{% else %}<span class="text-slate-400">{{ crumb.label }}</span><span class="text-slate-300 mx-1.5">/</span>{% endif %}
+    {% else %}
+      <span class="text-slate-700 font-medium">{{ crumb.label }}</span>
+    {% endif %}
+  {% endfor %}
+</nav>
+{% endif %}

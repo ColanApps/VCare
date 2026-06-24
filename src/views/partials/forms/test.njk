@@ -1,0 +1,37 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/customer/treatment/tests" class="erp-modal-form"
+  hx-post="/customer/treatment/tests" hx-swap="none">
+  <div class="erp-form-grid">
+    <div class="erp-field">
+      <label class="erp-label">Customer *</label>
+      <select name="customerId" class="erp-select" required>
+        <option value="">Select customer</option>
+        {% for c in customers %}<option value="{{ c.id }}">{{ c.firstName }} {{ c.lastName }} ({{ c.uhid }})</option>{% endfor %}
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Test Type *</label>
+      <select name="type" class="erp-select" required>
+        <option value="HMA">HMA (Hair Mineral Analysis)</option>
+        <option value="DSA">DSA (Digital Scalp Analysis)</option>
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Score</label>
+      <input type="number" name="score" class="erp-input" step="0.1">
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Grade</label>
+      <input type="text" name="grade" class="erp-input" placeholder="A / B / C">
+    </div>
+    <div class="erp-field sm:col-span-2">
+      <label class="erp-label">Findings</label>
+      <textarea name="findings" class="erp-input" rows="2"></textarea>
+    </div>
+    <div class="erp-field sm:col-span-2">
+      <label class="erp-label">Recommendations</label>
+      <textarea name="recommendations" class="erp-input" rows="2"></textarea>
+    </div>
+  </div>
+  {{ formFooter() }}
+</form>

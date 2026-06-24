@@ -1,0 +1,70 @@
+{% extends "layouts/auth.njk" %}
+
+{% block content %}
+<header class="erp-auth-brand">
+  <div class="erp-auth-brand-mark">
+    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+    </svg>
+  </div>
+  <div>
+    <div class="erp-auth-brand-name">{{ appName }}</div>
+    <div class="erp-auth-brand-tag">Clinic Process Enterprise</div>
+  </div>
+</header>
+
+<div class="mb-2">
+  <h2 class="erp-auth-heading">Welcome back</h2>
+  <p class="erp-auth-subheading">Sign in to continue to your workspace</p>
+</div>
+
+<form method="POST" action="/auth/login" class="erp-auth-form" id="login-form" novalidate>
+  <div>
+    <label for="login-email" class="erp-auth-label">Email ID</label>
+    <input type="email" name="email" id="login-email" value="{{ email or '' }}" required
+      class="erp-auth-input" placeholder="admin@vcare.com" autocomplete="username">
+  </div>
+
+  <div>
+    <label for="login-password" class="erp-auth-label">Password</label>
+    <div class="relative">
+      <input :type="showPassword ? 'text' : 'password'" name="password" id="login-password" required
+        class="erp-auth-input pr-12" placeholder="Enter your password" autocomplete="current-password">
+      <button type="button" @click="showPassword = !showPassword"
+        class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-md transition-colors"
+        aria-label="Toggle password visibility" tabindex="-1">
+        <svg x-show="!showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        <svg x-show="showPassword" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858 3.03a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+      </button>
+    </div>
+    <div class="flex justify-end mt-2.5">
+      <a href="#" class="erp-auth-forgot" onclick="return false;">Forgot Password?</a>
+    </div>
+  </div>
+
+  <button type="submit" class="erp-auth-submit">Sign In</button>
+</form>
+
+{% if demoLogins %}
+<section class="erp-auth-demo" aria-label="Quick demo access">
+  <p class="erp-auth-demo-label">Quick demo access</p>
+  <div class="erp-auth-demo-grid">
+    {% for d in demoLogins %}
+    <button type="button" class="erp-auth-demo-btn"
+      onclick="fillDemoLogin('{{ d.email }}', '{{ d.password }}')"
+      title="{{ d.email }}">{{ d.label }}</button>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function fillDemoLogin(email, password) {
+  document.getElementById('login-email').value = email;
+  document.getElementById('login-password').value = password;
+  document.getElementById('login-email').focus();
+}
+</script>
+{% endblock %}

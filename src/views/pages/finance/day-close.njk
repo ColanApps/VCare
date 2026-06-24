@@ -1,0 +1,163 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Day Close', 'Reconcile daily sales, collections, cash & deposits') %}
+  <a href="/finance" class="erp-btn-secondary text-sm">Finance Hub</a>
+{% endcall %}
+
+<form method="GET" class="erp-filter-bar">
+  {% if branches | length %}
+  <div class="erp-field min-w-[12rem]">
+    <label class="erp-label">Branch</label>
+    <select name="branchId" class="erp-select">
+      {% for b in branches %}<option value="{{ b.id }}" {% if b.id == branchId %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  <div class="erp-field">
+    <label class="erp-label">Close date</label>
+    <input type="date" name="date" value="{{ closeDate }}" class="erp-input">
+  </div>
+  <button type="submit" class="erp-btn-primary">Preview</button>
+</form>
+
+{% if preview %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2 space-y-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="erp-kpi"><div class="erp-kpi-label">Bills Total</div><div class="erp-kpi-value mt-1">{{ preview.billsTotal | currency }}</div></div>
+      <div class="erp-kpi"><div class="erp-kpi-label">Collections</div><div class="erp-kpi-value mt-1 text-emerald-600">{{ preview.collectionsTotal | currency }}</div></div>
+      <div class="erp-kpi"><div class="erp-kpi-label">Cash (system)</div><div class="erp-kpi-value mt-1">{{ preview.systemCash | currency }}</div></div>
+      <div class="erp-kpi"><div class="erp-kpi-label">GST Output</div><div class="erp-kpi-value mt-1">{{ preview.gstOutput | currency }}</div></div>
+    </div>
+
+    <div class="erp-card erp-table-card">
+      <div class="erp-card-header"><h3 class="font-semibold text-slate-900">Reconciliation Breakdown</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table text-sm">
+          <tbody>
+            <tr><td class="text-slate-600">Cash collections</td><td class="text-right font-medium">{{ preview.cashCollections | currency }}</td></tr>
+            <tr><td class="text-slate-600">Card</td><td class="text-right font-medium">{{ preview.cardCollections | currency }}</td></tr>
+            <tr><td class="text-slate-600">UPI</td><td class="text-right font-medium">{{ preview.upiCollections | currency }}</td></tr>
+            <tr><td class="text-slate-600">Bank / Cheque</td><td class="text-right font-medium">{{ preview.bankCollections | currency }}</td></tr>
+            <tr><td class="text-slate-600">Cash deposits</td><td class="text-right font-medium">{{ preview.depositsTotal | currency }}</td></tr>
+            <tr><td class="text-slate-600">Petty cash (approved)</td><td class="text-right font-medium">{{ preview.pettyTotal | currency }}</td></tr>
+            <tr><td class="text-slate-600">Refunds / credits</td><td class="text-right font-medium text-red-600">-{{ preview.refundsTotal | currency }}</td></tr>
+            <tr><td class="text-slate-600">Payments recorded</td><td class="text-right font-medium">{{ preview.paymentCount }}</td></tr>
+            <tr><td class="text-slate-600">DTR record</td><td class="text-right font-medium">{% if preview.dtr %}{{ preview.dtr.dtrNo }}{% else %}—{% endif %}</td></tr>
+          </tbody>
+        </table>
+    </div>
+    </div>
+
+    {% if preview.ledgerSummary %}
+    <div class="erp-card erp-table-card">
+      <div class="erp-card-header flex justify-between">
+        <h3 class="font-semibold text-slate-900">General Ledger Tie-Out</h3>
+        <a href="/finance/ledger" class="text-xs text-accent-600">View ledger →</a>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="erp-table text-sm">
+          <tbody>
+            <tr><td class="text-slate-600">Ledger collections (journal debits)</td><td class="text-right font-medium">{{ preview.ledgerSummary.totalCollections | currency }}</td></tr>
+            <tr><td class="text-slate-600">Ledger cash</td><td class="text-right font-medium">{{ preview.ledgerSummary.collections.CASH | currency }}</td></tr>
+            <tr><td class="text-slate-600">Ledger bank/card</td><td class="text-right font-medium">{{ preview.ledgerSummary.collections.BANK | currency }}</td></tr>
+            <tr><td class="text-slate-600">Ledger refunds</td><td class="text-right font-medium text-red-600">-{{ preview.ledgerSummary.refunds | currency }}</td></tr>
+            <tr><td class="text-slate-600">Journal entries</td><td class="text-right font-medium">{{ preview.ledgerSummary.entryCount }}</td></tr>
+            <tr>
+              <td class="text-slate-600">Collections vs ledger</td>
+              <td class="text-right font-medium">
+                {% set diff = preview.collectionsTotal - preview.ledgerSummary.totalCollections %}
+                {% if diff > -1 and diff < 1 %}<span class="text-emerald-600">✓ Matched</span>{% else %}<span class="text-amber-600">Δ {{ diff | currency }}</span>{% endif %}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-xs text-slate-500 px-4 pb-3">Locking day close posts a DAY_CLOSE journal entry to the general ledger.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="space-y-6">
+    {% if preview.existing %}
+    <div class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold text-slate-900">Existing Close</h3><span class="erp-badge-neutral">{{ preview.existing.status }}</span></div>
+      <div class="erp-card-body space-y-3 text-sm">
+        <div class="flex justify-between"><span class="text-slate-500">Close #</span><span class="font-mono text-xs">{{ preview.existing.closeNo }}</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Physical cash</span><span class="font-medium">{{ preview.existing.physicalCash | currency }}</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Variance</span><span class="font-medium {% if preview.existing.variance != 0 %}text-amber-600{% endif %}">{{ preview.existing.variance | currency }}</span></div>
+        {% if preview.existing.status == 'SUBMITTED' and ('finance.close.approve' in user.permissions or '*' in user.permissions) %}
+        <form method="POST" action="/finance/day-close/{{ preview.existing.id }}/approve" class="pt-2">
+          <button type="submit" class="erp-btn-primary w-full">Approve Day Close</button>
+        </form>
+        {% endif %}
+        {% if preview.existing.status == 'APPROVED' and ('finance.close.approve' in user.permissions or '*' in user.permissions) %}
+        <form method="POST" action="/finance/day-close/{{ preview.existing.id }}/lock" class="pt-2">
+          <button type="submit" class="erp-btn-secondary w-full">Lock Period</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    {% elif 'finance.close.submit' in user.permissions or '*' in user.permissions %}
+    <form method="POST" action="/finance/day-close" class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold text-slate-900">Submit Close</h3></div>
+      <div class="erp-card-body space-y-4">
+        <input type="hidden" name="branchId" value="{{ branchId }}">
+        <input type="hidden" name="closeDate" value="{{ closeDate }}">
+        <div>
+          <label class="erp-label">Physical cash counted</label>
+          <input type="number" name="physicalCash" step="0.01" class="erp-input" value="{{ preview.systemCash }}" required>
+          <p class="text-xs text-slate-500 mt-1.5">System expects <strong>{{ preview.systemCash | currency }}</strong> in cash</p>
+        </div>
+        <div>
+          <label class="erp-label">Notes</label>
+          <textarea name="notes" class="erp-input min-h-[4.5rem]" rows="3" placeholder="Variance explanation, handover notes…"></textarea>
+        </div>
+        <button type="submit" class="erp-btn-primary w-full">Submit for Approval</button>
+      </div>
+    </form>
+    {% else %}
+    <div class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold text-slate-900">Submit Close</h3></div>
+      <div class="erp-card-body text-sm text-slate-600">
+        <p>Day close submission is handled by the branch manager. Your role can review and approve submitted closes below.</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% elif branchId %}
+<p class="text-sm text-slate-500 py-8 text-center">Select a branch and date, then click Preview.</p>
+{% else %}
+<p class="text-sm text-amber-600 py-4">Select a branch to preview day close.</p>
+{% endif %}
+
+{% if pendingApproval | length %}
+<div class="erp-card erp-table-card mt-8">
+  <div class="erp-card-header"><h3 class="font-semibold text-slate-900">Pending Approvals</h3></div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead><tr><th>Close #</th><th>Branch</th><th>Date</th><th>Variance</th><th></th></tr></thead>
+      <tbody>
+        {% for dc in pendingApproval %}
+        <tr>
+          <td class="font-mono text-xs">{{ dc.closeNo }}</td>
+          <td>{{ dc.branch.name }}</td>
+          <td>{{ dc.closeDate | date }}</td>
+          <td class="{% if dc.variance != 0 %}text-amber-600{% endif %}">{{ dc.variance | currency }}</td>
+          <td>
+            {% if 'finance.close.approve' in user.permissions or '*' in user.permissions %}
+            <form method="POST" action="/finance/day-close/{{ dc.id }}/approve">
+              <button type="submit" class="erp-btn-primary text-xs">Approve</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endif %}
+{% endblock %}

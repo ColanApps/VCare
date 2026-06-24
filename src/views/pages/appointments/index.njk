@@ -1,0 +1,47 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+{% block content %}
+{% call pageToolbar('Appointment Scheduling') %}
+  {{ modalTrigger('Book Appointment', '/appointments/create', 'Book Appointment', 'xl') }}
+{% endcall %}
+
+<form method="GET" action="/appointments" class="erp-filter-bar">
+  <div class="erp-field">
+    <label class="erp-label">Select Date</label>
+    <input type="date" name="date" value="{{ selectedDate.toISOString().split('T')[0] }}" class="erp-input w-auto">
+  </div>
+  <button type="submit" class="erp-btn-secondary">View Day</button>
+  <a href="/appointments/search" class="erp-btn-ghost">Search All</a>
+</form>
+
+<div class="erp-card erp-table-card">
+  <div class="erp-card-header">
+    <h3 class="font-semibold text-slate-900">{{ selectedDate | date }}</h3>
+    <span class="erp-badge-neutral">{{ appointments | length }} appointments</span>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr><th>Time</th><th>Appointment No</th><th>Customer</th><th>Consultant</th><th>Branch</th><th>Type</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for a in appointments %}
+        <tr>
+          <td class="font-medium tabular-nums">{{ a.scheduledAt | datetime }}</td>
+          <td class="font-mono text-xs">{{ a.appointmentNo }}</td>
+          <td>{{ a.customer.firstName }} {{ a.customer.lastName }}</td>
+          <td>{% if a.consultant %}{{ a.consultant.firstName }} {{ a.consultant.lastName }}{% else %}—{% endif %}</td>
+          <td class="text-xs">{{ a.branch.name }}</td>
+          <td><span class="erp-badge-neutral">{{ a.type }}</span></td>
+          <td>{{ statusBadge(a.status) }}</td>
+          <td><a href="/appointments/{{ a.id }}" class="text-accent-600 hover:text-accent-700 text-xs font-medium">View</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="erp-empty-cell">No appointments for this date</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

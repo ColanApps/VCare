@@ -1,0 +1,13 @@
+{% if pagination and pagination.total > 0 %}
+<div class="flex items-center justify-between px-4 py-3 border-t border-surface-border text-xs text-slate-500">
+  <span>Showing {{ pagination.from }}–{{ pagination.to }} of {{ pagination.total }}</span>
+  <div class="flex gap-1">
+    {% if pagination.hasPrev %}
+    <a href="?page={{ pagination.page - 1 }}{% for k, v in filters %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="erp-btn-secondary px-3 py-1">Previous</a>
+    {% endif %}
+    {% if pagination.hasNext %}
+    <a href="?page={{ pagination.page + 1 }}{% for k, v in filters %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="erp-btn-secondary px-3 py-1">Next</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

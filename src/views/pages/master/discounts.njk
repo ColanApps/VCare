@@ -1,0 +1,147 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Discounts & Scheme Master') %}
+{% endcall %}
+
+<div x-data="{ tab: 'rules' }" class="space-y-6">
+  <div class="flex gap-2 border-b border-surface-border pb-2">
+    <button type="button" @click="tab = 'rules'" :class="tab === 'rules' ? 'erp-tab-active' : 'erp-tab'">Discount Rules</button>
+    <button type="button" @click="tab = 'schemes'" :class="tab === 'schemes' ? 'erp-tab-active' : 'erp-tab'">Scheme Offers</button>
+    <button type="button" @click="tab = 'limits'" :class="tab === 'limits' ? 'erp-tab-active' : 'erp-tab'">Max Discount Limits</button>
+  </div>
+
+  <div x-show="tab === 'rules'" x-cloak class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold">New Discount Rule</h3></div>
+      <form method="POST" action="/master/discounts/rule" class="erp-card-body space-y-4">
+        <div><label class="erp-label">Code</label><input type="text" name="code" class="erp-input" required></div>
+        <div><label class="erp-label">Name</label><input type="text" name="name" class="erp-input" required></div>
+        <div><label class="erp-label">Type</label>
+          <select name="type" class="erp-select"><option value="SERVICE">Service</option><option value="PRODUCT">Product</option></select>
+        </div>
+        <div><label class="erp-label">Category</label>
+          <select name="category" class="erp-select"><option value="ALL">All</option><option value="HAIR">Hair</option><option value="SKIN">Skin</option></select>
+        </div>
+        <div><label class="erp-label">Target Scope</label>
+          <select name="targetScope" class="erp-select"><option value="ALL">All Items</option><option value="SPECIFIC">Specific Item</option></select>
+        </div>
+        <div><label class="erp-label">Target ID (optional)</label><input type="text" name="targetId" class="erp-input" placeholder="Product/Treatment ID"></div>
+        <div><label class="erp-label">Discount %</label><input type="number" name="discountPercent" class="erp-input" step="0.01" min="0" max="100" required></div>
+        <div><label class="erp-label">Max Amount (₹)</label><input type="number" name="maxAmount" class="erp-input" step="0.01"></div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="erp-label">Valid From</label><input type="date" name="validFrom" class="erp-input"></div>
+          <div><label class="erp-label">Valid To</label><input type="date" name="validTo" class="erp-input"></div>
+        </div>
+        <button type="submit" class="erp-btn-primary w-full">Save Rule</button>
+      </form>
+    </div>
+    <div class="lg:col-span-2 erp-card erp-table-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Active Rules ({{ rules | length }})</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+        <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Category</th><th>Discount</th><th>Max</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for r in rules %}
+          <tr>
+            <td class="font-mono text-xs">{{ r.code }}</td>
+            <td class="font-medium">{{ r.name }}</td>
+            <td><span class="erp-badge-neutral">{{ r.type }}</span></td>
+            <td>{{ r.category }}</td>
+            <td>{{ r.discountPercent }}%</td>
+            <td>{% if r.maxAmount %}{{ r.maxAmount | currency }}{% else %}—{% endif %}</td>
+            <td>{% if r.isActive %}<span class="erp-badge-success">Active</span>{% else %}<span class="erp-badge-neutral">Inactive</span>{% endif %}
+              <form method="POST" action="/master/discounts/rule/{{ r.id }}/toggle" class="inline ml-1"><button type="submit" class="text-xs text-accent-600 hover:underline">Toggle</button></form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" class="erp-empty-cell">No discount rules configured</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+  </div>
+  </div>
+
+  <div x-show="tab === 'schemes'" x-cloak class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold">New Scheme Offer</h3></div>
+      <form method="POST" action="/master/discounts/scheme" class="erp-card-body space-y-4">
+        <div><label class="erp-label">Code</label><input type="text" name="code" class="erp-input" required></div>
+        <div><label class="erp-label">Name</label><input type="text" name="name" class="erp-input" required></div>
+        <div><label class="erp-label">Item Type</label>
+          <select name="itemType" class="erp-select"><option value="SERVICE">Service</option><option value="PRODUCT">Product</option></select>
+        </div>
+        <div><label class="erp-label">Category</label>
+          <select name="category" class="erp-select"><option value="ALL">All</option><option value="HAIR">Hair</option><option value="SKIN">Skin</option></select>
+        </div>
+        <div><label class="erp-label">Item Code (optional)</label><input type="text" name="itemCode" class="erp-input"></div>
+        <div><label class="erp-label">Discount %</label><input type="number" name="discountPercent" class="erp-input" step="0.01" required></div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="erp-label">Valid From *</label><input type="date" name="validFrom" class="erp-input" required></div>
+          <div><label class="erp-label">Valid To *</label><input type="date" name="validTo" class="erp-input" required></div>
+        </div>
+        <button type="submit" class="erp-btn-primary w-full">Save Scheme</button>
+      </form>
+    </div>
+    <div class="lg:col-span-2 erp-card erp-table-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Scheme Offers ({{ schemes | length }})</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+        <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Item</th><th>Discount</th><th>Valid Period</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for s in schemes %}
+          <tr>
+            <td class="font-mono text-xs">{{ s.code }}</td>
+            <td class="font-medium">{{ s.name }}</td>
+            <td><span class="erp-badge-neutral">{{ s.itemType }}</span></td>
+            <td>{{ s.itemCode or 'All' }}</td>
+            <td>{{ s.discountPercent }}%</td>
+            <td class="text-xs">{{ s.validFrom | date }} – {{ s.validTo | date }}</td>
+            <td>{% if s.isActive %}<span class="erp-badge-success">Active</span>{% else %}<span class="erp-badge-neutral">Inactive</span>{% endif %}
+              <form method="POST" action="/master/discounts/scheme/{{ s.id }}/toggle" class="inline ml-1"><button type="submit" class="text-xs text-accent-600 hover:underline">Toggle</button></form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" class="erp-empty-cell">No scheme offers configured</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+  </div>
+  </div>
+
+  <div x-show="tab === 'limits'" x-cloak class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Set Max Discount Limit</h3></div>
+      <form method="POST" action="/master/discounts/limit" class="erp-card-body space-y-4">
+        <div><label class="erp-label">Type</label>
+          <select name="type" class="erp-select"><option value="SERVICE">Service</option><option value="PRODUCT">Product</option></select>
+        </div>
+        <div><label class="erp-label">Category</label>
+          <select name="category" class="erp-select"><option value="ALL">All</option><option value="HAIR">Hair</option><option value="SKIN">Skin</option></select>
+        </div>
+        <div><label class="erp-label">Max Discount %</label><input type="number" name="maxPercent" class="erp-input" step="0.01" min="0" max="100" required></div>
+        <button type="submit" class="erp-btn-primary w-full">Save Limit</button>
+      </form>
+    </div>
+    <div class="lg:col-span-2 erp-card erp-table-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Configured Limits</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+        <thead><tr><th>Type</th><th>Category</th><th>Max Discount %</th></tr></thead>
+        <tbody>
+          {% for l in limits %}
+          <tr>
+            <td><span class="erp-badge-neutral">{{ l.type }}</span></td>
+            <td>{{ l.category }}</td>
+            <td class="font-medium">{{ l.maxPercent }}%</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="erp-empty-cell">No limits set — users can apply any discount</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+  </div>
+  </div>
+</div>
+{% endblock %}

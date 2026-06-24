@@ -1,0 +1,48 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Procedure Calendar', 'Week starting ' ~ (weekStart | date)) %}
+{% endcall %}
+
+<form method="GET" action="/appointments/procedures" class="erp-filter-bar mb-6">
+  <div class="erp-field">
+    <label class="erp-label">Week starting</label>
+    <input type="date" name="start" value="{{ weekStart.toISOString().split('T')[0] }}" class="erp-input">
+  </div>
+  <button type="submit" class="erp-btn-secondary">Go</button>
+</form>
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>Procedure No</th>
+          <th>Customer</th>
+          <th>Scheduled</th>
+          <th>Completed</th>
+          <th>Consent</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for proc in procedures %}
+        <tr>
+          <td class="font-mono text-xs">{{ proc.procedureNo }}</td>
+          <td>
+            <a href="/customer/{{ proc.customer.id }}" class="hover:underline font-medium">{{ proc.customer.firstName }} {{ proc.customer.lastName }}</a>
+          </td>
+          <td class="text-xs">{{ proc.scheduledAt | datetime }}</td>
+          <td class="text-xs">{% if proc.completedAt %}{{ proc.completedAt | datetime }}{% else %}—{% endif %}</td>
+          <td>{% if proc.consentGiven %}<span class="erp-badge-success">Yes</span>{% else %}<span class="erp-badge-warning">Pending</span>{% endif %}</td>
+          <td>{{ statusBadge(proc.status) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="erp-empty-cell">No procedures scheduled this week</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

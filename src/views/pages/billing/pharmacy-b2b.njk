@@ -1,0 +1,144 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Pharmacy B2B Invoicing', Tax invoices for corporate / institutional pharmacy buyers) %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2">
+    <form method="POST" action="/billing/pharmacy-b2b" id="b2b-form">
+      <div class="erp-card mb-6 erp-table-card">
+        <div class="erp-card-header"><h3 class="font-semibold">Invoice Details</h3></div>
+        <div class="erp-card-body erp-form-grid">
+          <div>
+            <label class="erp-label">Corporate Buyer *</label>
+            <select name="customerId" class="erp-select" required id="corp-select">
+              <option value="">Select corporate account</option>
+              {% for c in corporateCustomers %}
+              <option value="{{ c.id }}" data-gstin="{{ c.gstin or '' }}">{{ c.companyName or c.firstName }} ({{ c.uhid }})</option>
+              {% endfor %}
+            </select>
+            {% if corporateCustomers | length == 0 %}
+            <p class="text-xs text-amber-600 mt-1"><a href="/master/reference" class="underline">Create corporate account</a> first</p>
+            {% endif %}
+          </div>
+          <div>
+            <label class="erp-label">Buyer GSTIN</label>
+            <input type="text" name="buyerGstin" id="buyer-gstin" class="erp-input font-mono" placeholder="Auto from account">
+          </div>
+          <div>
+            <label class="erp-label">PO / Reference No</label>
+            <input type="text" name="poReference" class="erp-input" placeholder="Purchase order number">
+          </div>
+          <div>
+            <label class="erp-label">Credit Days</label>
+            <input type="number" name="creditDays" class="erp-input" min="0" placeholder="30">
+          </div>
+          <div>
+            <label class="erp-label">Payment Mode</label>
+            <select name="paymentMode" class="erp-select">
+              <option value="BANK_TRANSFER">Bank Transfer</option>
+              <option value="CHEQUE">Cheque</option>
+              <option value="CREDIT">Credit</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="erp-card erp-table-card">
+        <div class="erp-card-header"><h3 class="font-semibold">Products</h3></div>
+        <div class="erp-card-body">
+          <div class="flex flex-wrap gap-2 mb-4 p-3 bg-slate-50 rounded-lg">
+            <select id="product-select" class="erp-select text-sm flex-1 min-w-[200px]">
+              {% for p in products %}
+              <option value="{{ p.id }}|{{ p.sku }}|{{ p.name }}|{{ p.mrp }}">{{ p.name }} — {{ p.mrp | currency }}</option>
+              {% endfor %}
+            </select>
+            <input type="number" id="item-qty" class="erp-input w-20 text-sm" value="1" min="1">
+            <input type="number" id="item-price" class="erp-input w-24 text-sm" placeholder="Rate" step="0.01">
+            <button type="button" onclick="addB2BItem()" class="erp-btn-secondary text-sm">Add</button>
+          </div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+            <thead><tr><th>Product</th><th>SKU</th><th>Qty</th><th>Rate</th><th>Total</th><th></th></tr></thead>
+            <tbody id="b2b-items-body"><tr><td colspan="6" class="erp-empty-cell">Add line items</td></tr></tbody>
+          </table>
+          <input type="hidden" name="items" id="b2b-items-json" value="[]">
+        </div>
+      </div>
+
+      <div class="erp-card mt-6">
+        <div class="erp-card-body flex items-center justify-between">
+          <div><div class="text-sm text-slate-500">Invoice Total (incl. tax)</div><div class="text-2xl font-semibold" id="b2b-total">₹0</div></div>
+          <div class="flex gap-4 items-end">
+            {% if 'billing.payments' in user.permissions or '*' in user.permissions %}
+            <div><label class="erp-label">Paid Now</label><input type="number" name="paidAmount" id="paid-amount" class="erp-input w-32" step="0.01" value="0"></div>
+            {% else %}
+            <input type="hidden" name="paidAmount" value="0">
+            <p class="text-xs text-slate-500 pb-2">Collections recorded by Accounts after invoice.</p>
+            {% endif %}
+            <button type="submit" class="erp-btn-primary">Generate B2B Invoice</button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="erp-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Recent B2B Invoices</h3></div>
+    <div class="divide-y divide-surface-border">
+      {% for b in recentBills %}
+      <a href="/billing/{{ b.id }}" class="block p-4 hover:bg-slate-50">
+        <div class="flex justify-between"><span class="font-mono text-xs">{{ b.billNo }}</span>{{ statusBadge(b.status) }}</div>
+        <div class="text-sm">{{ b.customer.companyName or b.customer.firstName }}</div>
+        <div class="flex justify-between items-center">
+          <span class="text-sm font-medium">{{ b.totalAmount | currency }}</span>
+          <a href="/billing/{{ b.id }}/pdf" class="text-xs text-accent-600" target="_blank" onclick="event.stopPropagation()">PDF</a>
+        </div>
+      </a>
+      {% else %}
+      <div class="p-6 text-center text-slate-400">No B2B invoices yet</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const b2bItems = [];
+document.getElementById('corp-select')?.addEventListener('change', function() {
+  const gstin = this.selectedOptions[0]?.dataset.gstin || '';
+  document.getElementById('buyer-gstin').value = gstin;
+});
+
+function addB2BItem() {
+  const [productId, sku, name, mrp] = document.getElementById('product-select').value.split('|');
+  const qty = parseInt(document.getElementById('item-qty').value, 10) || 1;
+  const customPrice = parseFloat(document.getElementById('item-price').value);
+  const unitPrice = !isNaN(customPrice) && customPrice > 0 ? customPrice : parseFloat(mrp);
+  b2bItems.push({ productId, itemType: 'PRODUCT', itemCode: sku, itemName: name, quantity: qty, unitPrice });
+  renderB2BItems();
+}
+
+function removeB2BItem(i) { b2bItems.splice(i, 1); renderB2BItems(); }
+
+function renderB2BItems() {
+  const tbody = document.getElementById('b2b-items-body');
+  const input = document.getElementById('b2b-items-json');
+  let total = 0;
+  if (!b2bItems.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="erp-empty-cell">Add line items</td></tr>';
+  } else {
+    tbody.innerHTML = b2bItems.map((item, i) => {
+      const line = item.quantity * item.unitPrice * 1.12;
+      total += line;
+      return `<tr><td>${item.itemName}</td><td class="font-mono text-xs">${item.itemCode}</td><td>${item.quantity}</td><td>₹${item.unitPrice}</td><td>₹${line.toFixed(2)}</td><td><button type="button" onclick="removeB2BItem(${i})" class="text-red-500 text-xs">Remove</button></td></tr>`;
+    }).join('');
+  }
+  input.value = JSON.stringify(b2bItems);
+  document.getElementById('b2b-total').textContent = '₹' + total.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+}
+</script>
+{% endblock %}

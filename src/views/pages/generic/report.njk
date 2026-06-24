@@ -1,0 +1,95 @@
+{% extends "layouts/main.njk" %}
+{% from "partials/report-filters.njk" import reportPeriodFilter %}
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+{% block content %}
+{% call pageToolbar(title) %}
+  {% if exportable %}
+  <a href="{{ screen.path }}/export{% if filters.branchId %}?branchId={{ filters.branchId }}{% endif %}" class="erp-btn-secondary text-sm">Export CSV</a>
+  {% endif %}
+  {% if screen.dataKey == 'ccLeadUpload' %}
+  {{ modalTrigger('Upload Leads', '/registry/forms/lead-upload', 'Lead Upload', 'lg') }}
+  {% endif %}
+{% endcall %}
+{% if period %}
+{{ reportPeriodFilter(screen.path, period, branches) }}
+<p class="text-sm text-slate-500 mb-5">{{ period.from | date }} — {{ period.to | date }}</p>
+{% endif %}
+{% if hint %}<p class="text-sm text-slate-500 mb-5">{{ hint }}</p>{% endif %}
+
+<div class="erp-filter-bar mb-4">
+  <input type="search" id="report-search" class="erp-input flex-1" placeholder="Filter rows…" oninput="filterReportRows(this.value)">
+</div>
+
+{% if kpis and kpis.length %}
+<div class="erp-kpi-grid erp-kpi-grid-auto mb-6">
+  {% for kpi in kpis %}
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">{{ kpi.label }}</div>
+    <div class="erp-kpi-value mt-1">{% if kpi.value is number and kpi.value > 999 %}{{ kpi.value | currency }}{% else %}{{ kpi.value | number }}{% endif %}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table" id="report-table">
+      <thead>
+        <tr>{% for col in columns %}<th>{{ col[0] }}</th>{% endfor %}<th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr class="report-row">
+          {% for col in columns %}
+          <td>
+            {% set v = row[col[1]] %}
+            {% if row._href and row._linkCol == col[1] %}
+            <a href="{{ row._href }}" class="text-blue-600 hover:underline font-medium">{% if v is number and ('amount' in col[0] | lower or 'revenue' in col[0] | lower or 'total' in col[0] | lower) %}{{ v | currency }}{% elif v and v.toISOString %}{{ v | date }}{% else %}{{ v or '—' }}{% endif %}</a>
+            {% elif v is number and ('amount' in col[0] | lower or 'revenue' in col[0] | lower or 'total' in col[0] | lower or 'target' in col[0] | lower or 'achieved' in col[0] | lower or 'emi' in col[0] | lower or 'value' in col[0] | lower or 'fee' in col[0] | lower or 'principal' in col[0] | lower) %}{{ v | currency }}
+            {% elif v and v.toISOString %}{{ v | date }}
+            {% else %}{{ v or '—' }}{% endif %}
+          </td>
+          {% endfor %}
+          <td class="whitespace-nowrap space-x-1">
+            {% if row._actions and row._actions.length %}
+              {% for act in row._actions %}
+                {% if act.method == 'GET' and '/forms/' in act.url %}
+                <button type="button" class="erp-btn-primary text-xs px-2 py-1"
+                  hx-get="{{ act.url }}" hx-target="#erp-modal-body" hx-swap="innerHTML"
+                  @click="$dispatch('erp-open-modal', { title: '{{ act.label }}' })">{{ act.label }}</button>
+                {% elif act.method == 'GET' %}
+                <a href="{{ act.url }}" class="erp-btn-primary text-xs px-2 py-1 inline-block">{{ act.label }}</a>
+                {% else %}
+                <form method="POST" action="{{ act.url }}" class="inline" {% if act.confirm %}onsubmit="return confirm('{{ act.confirm }}')"{% endif %}>
+                  {% if act.needsAction %}<input type="hidden" name="action" value="approve">{% endif %}
+                  <button type="submit" class="{% if act.style == 'danger' %}erp-btn-danger{% else %}erp-btn-primary{% endif %} text-xs px-2 py-1">{{ act.label }}</button>
+                </form>
+                {% endif %}
+              {% endfor %}
+            {% elif screen.actions == 'iou-settle' and row._id %}
+            <form method="POST" action="/registry/actions/iou/{{ row._id }}/settle" class="inline"><button type="submit" class="erp-btn-primary text-xs px-2 py-1">Settle</button></form>
+            {% elif screen.actions == 'petty-approve' and row._id %}
+            <form method="POST" action="/registry/actions/petty/{{ row._id }}/approve" class="inline"><input type="hidden" name="action" value="approve"><button type="submit" class="erp-btn-primary text-xs px-2 py-1">Approve</button></form>
+            {% elif screen.actions == 'reimburse-approve' and row._id %}
+            <form method="POST" action="/registry/actions/reimbursement/{{ row._id }}/approve" class="inline"><button type="submit" class="erp-btn-primary text-xs px-2 py-1">Approve</button></form>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="{{ columns.length + 1 }}" class="erp-empty-cell">No data for this period</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function filterReportRows(q) {
+  const term = (q || '').toLowerCase();
+  document.querySelectorAll('#report-table .report-row').forEach((tr) => {
+    tr.style.display = !term || tr.textContent.toLowerCase().includes(term) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

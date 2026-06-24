@@ -1,0 +1,82 @@
+<form method="POST" action="/inventory/indents/create" id="indent-form" class="erp-modal-form"
+  hx-post="/inventory/indents/create" hx-swap="none">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <div class="lg:col-span-2 erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold text-sm">Indent Items</h3></div>
+      <div class="erp-card-body">
+        <div class="flex gap-2 mb-4 p-3 bg-slate-50 rounded-lg">
+          <select id="product-select" class="erp-select flex-1 text-sm">
+            {% for p in products %}<option value="{{ p.id }}">{{ p.name }} ({{ p.sku }})</option>{% endfor %}
+          </select>
+          <input type="number" id="item-qty" class="erp-input w-24 text-sm" value="1" min="1">
+          <button type="button" onclick="addIndentItem()" class="erp-btn-secondary text-sm">Add</button>
+        </div>
+        <table class="erp-table">
+          <thead><tr><th>Product</th><th>Quantity</th><th></th></tr></thead>
+          <tbody id="indent-items-body">
+            <tr><td colspan="3" class="erp-empty-cell">Add products to indent</td></tr>
+          </tbody>
+        </table>
+        <input type="hidden" name="items" id="indent-items-json" value="[]">
+      </div>
+    </div>
+
+    <div class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold text-sm">Details</h3></div>
+      <div class="erp-card-body space-y-4">
+        <div class="erp-field">
+          <label class="erp-label">Branch</label>
+          <select name="branchId" class="erp-select">
+            {% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="erp-field">
+          <label class="erp-label">Type</label>
+          <select name="type" class="erp-select">
+            <option value="BILLABLE" {% if indentType == 'BILLABLE' %}selected{% endif %}>Billable</option>
+            <option value="CONSUMABLE" {% if indentType == 'CONSUMABLE' %}selected{% endif %}>Consumable</option>
+          </select>
+        </div>
+        <div class="erp-field">
+          <label class="erp-label">Notes</label>
+          <textarea name="notes" class="erp-input" rows="3"></textarea>
+        </div>
+        <button type="submit" class="erp-btn-primary w-full">Submit Indent</button>
+      </div>
+    </div>
+  </div>
+</form>
+<script>
+const indentItems = [];
+const productsList = {{ products | json | safe }};
+const productNames = Object.fromEntries(productsList.map((p) => [p.id, p.name]));
+
+function addIndentItem() {
+  const productId = document.getElementById('product-select').value;
+  const quantity = parseInt(document.getElementById('item-qty').value, 10) || 1;
+  indentItems.push({ productId, quantity });
+  renderIndentItems();
+}
+
+function removeIndentItem(index) {
+  indentItems.splice(index, 1);
+  renderIndentItems();
+}
+
+function renderIndentItems() {
+  const tbody = document.getElementById('indent-items-body');
+  const input = document.getElementById('indent-items-json');
+  if (indentItems.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="3" class="erp-empty-cell">Add products to indent</td></tr>';
+  } else {
+    tbody.innerHTML = indentItems.map((item, i) => `
+      <tr>
+        <td>${productNames[item.productId] || item.productId}</td>
+        <td>${item.quantity}</td>
+        <td><button type="button" onclick="removeIndentItem(${i})" class="text-red-500 text-xs">Remove</button></td>
+      </tr>
+    `).join('');
+  }
+  input.value = JSON.stringify(indentItems);
+}
+</script>

@@ -1,0 +1,15 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/master/treatments" class="erp-modal-form" hx-post="/master/treatments" hx-swap="none">
+  <div class="erp-form-grid">
+    <div class="erp-field"><label class="erp-label">Code</label><input type="text" name="code" class="erp-input" required></div>
+    <div class="erp-field"><label class="erp-label">Name</label><input type="text" name="name" class="erp-input" required></div>
+    <div class="erp-field">
+      <label class="erp-label">Category</label>
+      <select name="category" class="erp-select"><option value="HAIR">Hair</option><option value="SKIN">Skin</option></select>
+    </div>
+    <div class="erp-field"><label class="erp-label">Duration (mins)</label><input type="number" name="duration" class="erp-input" value="60"></div>
+    <div class="erp-field"><label class="erp-label">Base Price</label><input type="number" name="basePrice" class="erp-input" step="0.01" data-currency></div>
+    <div class="erp-field sm:col-span-2"><label class="erp-label">Description</label><textarea name="description" class="erp-input" rows="2"></textarea></div>
+  </div>
+  {{ formFooter() }}
+</form>

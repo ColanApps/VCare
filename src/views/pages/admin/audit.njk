@@ -1,0 +1,46 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Audit Trail') %}
+{% endcall %}
+
+<div class="erp-card erp-table-card">
+  <div class="erp-card-header">
+    <h3 class="font-semibold text-slate-900">Activity Log</h3>
+    <span class="text-xs text-slate-500">{{ pagination.total or logs | length }} records</span>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>User</th>
+          <th>Action</th>
+          <th>Module</th>
+          <th>Entity</th>
+          <th>IP Address</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td class="font-mono text-xs whitespace-nowrap">{{ log.createdAt | datetime }}</td>
+          <td>
+            {% if log.user %}{{ log.user.firstName }} {{ log.user.lastName }}{% else %}<span class="text-slate-400">System</span>{% endif %}
+          </td>
+          <td><span class="erp-badge-neutral">{{ log.action }}</span></td>
+          <td>{{ log.module }}</td>
+          <td class="text-xs">
+            {% if log.entityType %}{{ log.entityType }}{% if log.entityId %}<span class="text-slate-400"> · {{ log.entityId | truncate(8, true, '') }}</span>{% endif %}{% else %}—{% endif %}
+          </td>
+          <td class="font-mono text-xs">{{ log.ipAddress or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="erp-empty-cell">No audit records found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "partials/pagination.njk" %}
+</div>
+{% endblock %}

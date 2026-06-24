@@ -1,0 +1,57 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Quality Check — ' ~ grn.grnNo, 'PO ' ~ grn.po.poNo ~ ' · ' ~ grn.po.vendor.name) %}
+{% endcall %}
+
+<form method="POST" action="{{ qualityActionUrl or ('/purchase/grn/' + grn.id + '/quality') }}" id="quality-form">
+  <div class="erp-card erp-table-card mb-6">
+    <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead><tr><th>Product</th><th>Qty</th><th>Batch</th><th>Result</th><th>Expiry</th><th>Notes</th></tr></thead>
+      <tbody>
+        {% for item in grn.items %}
+        <tr>
+          <td class="font-medium">{{ item.product.name }}</td>
+          <td>{{ item.quantity }}</td>
+          <td class="font-mono text-xs">{{ item.batchNo or '—' }}</td>
+          <td>
+            <select class="erp-select text-sm quality-status" data-item-id="{{ item.id }}">
+              <option value="PASSED">Passed</option>
+              <option value="FAILED">Failed</option>
+            </select>
+          </td>
+          <td><input type="date" class="erp-input text-sm quality-expiry" data-item-id="{{ item.id }}"></td>
+          <td><input type="text" class="erp-input text-sm quality-notes" data-item-id="{{ item.id }}" placeholder="QC notes"></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  <input type="hidden" name="itemQuality" id="item-quality-json" value="[]">
+  <div class="flex gap-3">
+    <button type="submit" name="action" value="accept" class="erp-btn-primary" onclick="collectQuality()">Approve & Receive Stock</button>
+    <button type="submit" name="action" value="reject" class="erp-btn-danger" onclick="collectQuality()">Reject GRN</button>
+    <a href="{{ cancelUrl or backUrl or '/purchase/grn/pending' }}" class="erp-btn-secondary">Cancel</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function collectQuality() {
+  const rows = [];
+  document.querySelectorAll('.quality-status').forEach((el) => {
+    const id = el.dataset.itemId;
+    rows.push({
+      itemId: id,
+      qualityStatus: el.value,
+      expiryDate: document.querySelector(`.quality-expiry[data-item-id="${id}"]`)?.value || null,
+      qualityNotes: document.querySelector(`.quality-notes[data-item-id="${id}"]`)?.value || null,
+    });
+  });
+  document.getElementById('item-quality-json').value = JSON.stringify(rows);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/registry/forms/product-tax/{{ product.id }}" class="erp-modal-form" hx-post="/registry/forms/product-tax/{{ product.id }}" hx-swap="none">
+  <div class="erp-form-grid">
+    <div class="erp-field sm:col-span-2"><label class="erp-label">Product</label><input class="erp-input" value="{{ product.name }}" readonly></div>
+    <div class="erp-field"><label class="erp-label">HSN Code</label><input name="hsnCode" class="erp-input" value="{{ product.hsnCode or '' }}"></div>
+    <div class="erp-field"><label class="erp-label">Tax %</label><input name="taxRate" type="number" step="0.01" class="erp-input" value="{{ product.taxRate }}"></div>
+  </div>
+  {{ formFooter('Update Tax') }}
+</form>

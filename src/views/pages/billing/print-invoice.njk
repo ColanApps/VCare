@@ -1,0 +1,76 @@
+{% extends layout %}
+{% block content %}
+<div class="max-w-3xl mx-auto border border-slate-200 rounded-lg p-8 bg-white">
+  <div class="text-center border-b border-slate-200 pb-4 mb-6">
+    <h1 class="text-xl font-bold">{{ bill.branch.name }}</h1>
+    <p class="text-sm text-slate-500">{{ appName }}</p>
+    <p class="text-lg font-semibold mt-2">
+      {% if bill.source == 'B2B' or bill.buyerGstin %}Tax Invoice{% elif bill.billType == 'PHARMACY' %}Pharmacy Bill{% elif bill.billType == 'PRODUCT' %}Sales Invoice{% else %}Service Bill{% endif %}
+    </p>
+    <p class="font-mono text-sm mt-1">{{ bill.billNo }}</p>
+    <p class="text-xs text-slate-500">{{ bill.billDate | datetime }}</p>
+  </div>
+
+  <div class="grid grid-cols-2 gap-6 mb-6 text-sm">
+    <div>
+      <p class="text-xs font-semibold text-slate-500 uppercase mb-1">Bill To</p>
+      <p class="font-medium">{{ bill.customer.firstName }} {{ bill.customer.lastName }}</p>
+      <p class="text-slate-600">UHID: {{ bill.customer.uhid }}</p>
+      {% if bill.customer.phone %}<p class="text-slate-600">{{ bill.customer.phone }}</p>{% endif %}
+      {% if bill.buyerGstin or bill.customer.gstin %}<p class="text-slate-600 font-mono text-xs">GSTIN: {{ bill.buyerGstin or bill.customer.gstin }}</p>{% endif %}
+      {% if bill.poReference %}<p class="text-slate-600">PO: {{ bill.poReference }}</p>{% endif %}
+    </div>
+    <div class="text-right">
+      <p class="text-xs font-semibold text-slate-500 uppercase mb-1">Status</p>
+      <p class="font-medium">{{ bill.status }}</p>
+      {% if bill.paymentMode %}<p class="text-slate-600">Mode: {{ bill.paymentMode }}</p>{% endif %}
+    </div>
+  </div>
+
+  <table class="w-full text-sm mb-6">
+    <thead>
+      <tr class="border-b border-slate-200 text-left text-xs text-slate-500">
+        <th class="py-2">#</th><th>Description</th><th>HSN/SAC</th><th class="text-right">Qty</th><th class="text-right">Rate</th><th class="text-right">Tax</th><th class="text-right">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in bill.items %}
+      <tr class="border-b border-slate-100">
+        <td class="py-2">{{ loop.index }}</td>
+        <td>{{ item.itemName }}</td>
+        <td class="font-mono text-xs">{{ item.itemCode }}</td>
+        <td class="text-right">{{ item.quantity }}</td>
+        <td class="text-right">{{ item.unitPrice | currency }}</td>
+        <td class="text-right">{{ item.taxAmount | currency }}</td>
+        <td class="text-right font-medium">{{ item.totalAmount | currency }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="flex justify-end mb-6">
+    <dl class="w-64 text-sm space-y-1">
+      <div class="flex justify-between"><dt class="text-slate-500">Subtotal</dt><dd>{{ bill.subtotal | currency }}</dd></div>
+      {% if bill.discount > 0 %}<div class="flex justify-between"><dt class="text-slate-500">Discount</dt><dd class="text-red-600">-{{ bill.discount | currency }}</dd></div>{% endif %}
+      <div class="flex justify-between"><dt class="text-slate-500">CGST</dt><dd>{{ (bill.taxAmount / 2) | currency }}</dd></div>
+      <div class="flex justify-between"><dt class="text-slate-500">SGST</dt><dd>{{ (bill.taxAmount / 2) | currency }}</dd></div>
+      <div class="flex justify-between font-semibold text-base border-t border-slate-200 pt-2 mt-2"><dt>Grand Total</dt><dd>{{ bill.totalAmount | currency }}</dd></div>
+      <div class="flex justify-between"><dt class="text-slate-500">Paid</dt><dd class="text-emerald-600">{{ bill.paidAmount | currency }}</dd></div>
+      <div class="flex justify-between"><dt class="text-slate-500">Balance</dt><dd>{{ bill.balanceAmount | currency }}</dd></div>
+    </dl>
+  </div>
+
+  {% if bill.payments | length %}
+  <div class="text-sm mb-6">
+    <p class="text-xs font-semibold text-slate-500 uppercase mb-2">Payments</p>
+    <ul class="space-y-1">
+      {% for p in bill.payments %}
+      <li>{{ p.paymentDate | datetime }} — {{ p.amount | currency }} ({{ p.paymentMode }})</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <p class="text-xs text-slate-400 text-center">Computer-generated invoice · {{ appName }}</p>
+</div>
+{% endblock %}

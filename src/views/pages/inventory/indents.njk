@@ -1,0 +1,43 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+{% block content %}
+{% call pageToolbar('Indent Search', 'Stock indent requests and approvals') %}
+  {{ modalTrigger('Raise Indent', '/inventory/indents/create', 'Raise Indent', 'lg') }}
+{% endcall %}
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>Indent No</th>
+          <th>Branch</th>
+          <th>Type</th>
+          <th>Items</th>
+          <th>Created By</th>
+          <th>Approved By</th>
+          <th>Status</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ind in indents %}
+        <tr>
+          <td class="font-mono text-xs font-medium">{{ ind.indentNo }}</td>
+          <td>{{ ind.branch.name }}</td>
+          <td><span class="erp-badge-neutral">{{ ind.type }}</span></td>
+          <td>{{ ind.items | length }} items</td>
+          <td>{{ ind.createdBy.firstName }} {{ ind.createdBy.lastName }}</td>
+          <td>{% if ind.approvedBy %}{{ ind.approvedBy.firstName }} {{ ind.approvedBy.lastName }}{% else %}—{% endif %}</td>
+          <td>{{ statusBadge(ind.status) }}</td>
+          <td class="text-xs text-slate-500">{{ ind.createdAt | date }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="erp-empty-cell">No indents found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

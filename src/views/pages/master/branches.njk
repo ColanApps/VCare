@@ -1,0 +1,32 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+{% block content %}
+{% call pageToolbar('Branches & Zones', 'Manage clinic locations and zones') %}
+  {{ modalTrigger('Add Branch', '/master/branches/form', 'New Branch', 'lg') }}
+{% endcall %}
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr><th>Code</th><th>Name</th><th>Type</th><th>Zone</th><th>City</th><th>Contact</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for b in branches %}
+        <tr>
+          <td class="font-mono text-xs">{{ b.code }}</td>
+          <td class="font-medium">{{ b.name }}</td>
+          <td><span class="erp-badge-neutral">{{ b.type }}</span></td>
+          <td>{% if b.zone %}{{ b.zone.name }}{% else %}—{% endif %}</td>
+          <td>{% if b.city %}{{ b.city.name }}{% else %}—{% endif %}</td>
+          <td class="text-xs">{{ b.phone or b.email or '—' }}</td>
+          <td>{% if b.isActive %}<span class="erp-badge-success">Active</span>{% else %}<span class="erp-badge-danger">Inactive</span>{% endif %}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="erp-empty-cell">No branches configured</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

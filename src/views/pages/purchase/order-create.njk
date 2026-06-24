@@ -1,0 +1,111 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Create Purchase Order') %}
+{% endcall %}
+
+<form method="POST" action="/purchase/orders/create" id="po-form">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 erp-card erp-table-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Order Items</h3></div>
+      <div class="erp-card-body">
+        <div class="flex gap-2 mb-4 p-3 bg-slate-50 rounded-lg">
+          <select id="product-select" class="erp-select flex-1 text-sm">
+            {% for p in products %}<option value="{{ p.id }}" data-price="{{ p.costPrice }}">{{ p.name }} ({{ p.sku }})</option>{% endfor %}
+          </select>
+          <input type="number" id="item-qty" class="erp-input w-20 text-sm" value="1" min="1" placeholder="Qty">
+          <input type="number" id="item-price" class="erp-input w-28 text-sm" step="0.01" placeholder="Price">
+          <button type="button" onclick="addPOItem()" class="erp-btn-secondary text-sm">Add</button>
+        </div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+          <thead><tr><th>Product</th><th>Qty</th><th>Unit Price</th><th>Total</th><th></th></tr></thead>
+          <tbody id="po-items-body">
+            <tr><td colspan="5" class="erp-empty-cell">Add products to PO</td></tr>
+          </tbody>
+          <tfoot>
+            <tr class="bg-slate-50 font-semibold">
+              <td colspan="3" class="text-right">Total</td>
+              <td id="po-total">₹0</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+        <input type="hidden" name="items" id="po-items-json" value="[]">
+      </div>
+    </div>
+
+    <div class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold">PO Details</h3></div>
+      <div class="erp-card-body space-y-4">
+        <div>
+          <label class="erp-label">Vendor *</label>
+          <select name="vendorId" class="erp-select" required>
+            <option value="">Select vendor</option>
+            {% for v in vendors %}<option value="{{ v.id }}">{{ v.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="erp-label">Expected Delivery</label>
+          <input type="date" name="expectedDate" class="erp-input">
+        </div>
+        <div>
+          <label class="erp-label">Notes</label>
+          <textarea name="notes" class="erp-input" rows="3"></textarea>
+        </div>
+        <button type="submit" class="erp-btn-primary w-full">Create PO</button>
+        <a href="/purchase/orders" class="erp-btn-secondary w-full text-center block">Cancel</a>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const poItems = [];
+const productData = { {% for p in products %}"{{ p.id }}": { name: "{{ p.name }}", price: {{ p.costPrice }} },{% endfor %} };
+
+document.getElementById('product-select').addEventListener('change', function() {
+  const opt = this.options[this.selectedIndex];
+  document.getElementById('item-price').value = opt.dataset.price || '';
+});
+
+function addPOItem() {
+  const sel = document.getElementById('product-select');
+  const productId = sel.value;
+  const quantity = parseInt(document.getElementById('item-qty').value, 10) || 1;
+  const unitPrice = parseFloat(document.getElementById('item-price').value) || productData[productId]?.price || 0;
+  poItems.push({ productId, quantity, unitPrice });
+  renderPOItems();
+}
+
+function removePOItem(index) {
+  poItems.splice(index, 1);
+  renderPOItems();
+}
+
+function renderPOItems() {
+  const tbody = document.getElementById('po-items-body');
+  const input = document.getElementById('po-items-json');
+  let total = 0;
+  if (poItems.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="erp-empty-cell">Add products to PO</td></tr>';
+  } else {
+    tbody.innerHTML = poItems.map((item, i) => {
+      const lineTotal = item.quantity * item.unitPrice;
+      total += lineTotal;
+      return `<tr>
+        <td>${productData[item.productId]?.name || item.productId}</td>
+        <td>${item.quantity}</td>
+        <td>₹${item.unitPrice.toLocaleString('en-IN')}</td>
+        <td class="font-medium">₹${lineTotal.toLocaleString('en-IN')}</td>
+        <td><button type="button" onclick="removePOItem(${i})" class="text-red-500 text-xs">Remove</button></td>
+      </tr>`;
+    }).join('');
+  }
+  input.value = JSON.stringify(poItems);
+  document.getElementById('po-total').textContent = '₹' + total.toLocaleString('en-IN');
+}
+</script>
+{% endblock %}

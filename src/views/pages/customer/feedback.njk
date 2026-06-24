@@ -1,0 +1,52 @@
+{% extends "layouts/main.njk" %}
+
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+
+{% block content %}
+
+{% call pageToolbar('Treatment Feedback', 'Post-visit customer feedback and ratings') %}
+
+  {{ modalTrigger('Add Feedback', '/customer/treatment/feedback/form', 'Record Feedback', 'md') }}
+
+{% endcall %}
+
+
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+
+    <thead><tr><th>Date</th><th>Customer</th><th>Visit</th><th>Rating</th><th>Feedback</th></tr></thead>
+
+    <tbody>
+
+      {% for f in feedbacks %}
+
+      <tr>
+
+        <td class="text-xs">{{ f.submittedAt | datetime }}</td>
+
+        <td><a href="/customer/{{ f.customer.id }}" class="text-accent-600 hover:underline">{{ f.customer.firstName }} {{ f.customer.lastName }}</a></td>
+
+        <td class="font-mono text-xs">{{ f.visit.visitNo if f.visit else '—' }}</td>
+
+        <td>{% if f.rating %}<span class="text-amber-600">{{ f.rating }} ★</span>{% else %}—{% endif %}</td>
+
+        <td class="text-sm max-w-md">{{ f.feedback }}</td>
+
+      </tr>
+
+      {% else %}
+
+      <tr><td colspan="5" class="erp-empty-cell">No feedback recorded</td></tr>
+
+      {% endfor %}
+
+    </tbody>
+
+  </table>
+  </div>
+</div>
+
+{% endblock %}
+

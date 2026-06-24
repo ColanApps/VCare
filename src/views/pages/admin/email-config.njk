@@ -1,0 +1,48 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Email Configuration') %}
+{% endcall %}
+
+<div class="max-w-2xl">
+  <div class="erp-card">
+    <div class="erp-card-header">
+      <h3 class="font-semibold text-slate-900">SMTP Settings</h3>
+      {% if config and config.isActive %}<span class="erp-badge-success">Active</span>{% else %}<span class="erp-badge-warning">Inactive</span>{% endif %}
+    </div>
+    <form method="POST" action="/admin/email-config" class="erp-card-body">
+      <div class="erp-form-grid">
+        <div>
+          <label class="erp-label">SMTP Host</label>
+          <input type="text" name="host" class="erp-input" value="{{ config.host or '' }}" placeholder="smtp.gmail.com" required>
+        </div>
+        <div>
+          <label class="erp-label">Port</label>
+          <input type="number" name="port" class="erp-input" value="{{ config.port or 587 }}" required>
+        </div>
+        <div>
+          <label class="erp-label">Username</label>
+          <input type="text" name="username" class="erp-input" value="{{ config.username or '' }}" required>
+        </div>
+        <div>
+          <label class="erp-label">Password</label>
+          <input type="password" name="password" class="erp-input" value="{{ config.password or '' }}" placeholder="••••••••">
+        </div>
+        <div class="col-span-full">
+          <label class="erp-label">From Email</label>
+          <input type="email" name="fromEmail" class="erp-input" value="{{ config.fromEmail or '' }}" placeholder="noreply@vcareclinics.com" required>
+        </div>
+        <div class="col-span-full">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="isActive" class="rounded border-slate-300" {% if config and config.isActive %}checked{% endif %}>
+            <span class="erp-label mb-0">Enable email notifications</span>
+          </label>
+        </div>
+      </div>
+      <div class="mt-6 flex gap-2">
+        <button type="submit" class="erp-btn-primary">Save Configuration</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

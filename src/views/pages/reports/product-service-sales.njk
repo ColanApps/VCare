@@ -1,0 +1,29 @@
+{% extends "layouts/main.njk" %}
+{% from "partials/report-filters.njk" import reportPeriodFilter %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Product / Service Sales') %}
+{% endcall %}
+{{ reportPeriodFilter('/reports/product-service-sales', period) }}
+<p class="text-sm text-slate-500 mb-6">{{ period.from | date }} — {{ period.to | date }}</p>
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+    <thead><tr><th>Type</th><th>Item</th><th>Qty Sold</th><th>Revenue</th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td><span class="erp-badge-neutral">{{ row.itemType }}</span></td>
+        <td class="font-medium">{{ row.itemName }}</td>
+        <td>{{ row.quantity | number }}</td>
+        <td class="font-medium">{{ row.revenue | currency }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="erp-empty-cell">No sales in period</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

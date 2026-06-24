@@ -1,0 +1,15 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/registry/forms/lead-upload" enctype="multipart/form-data" class="erp-modal-form"
+  hx-post="/registry/forms/lead-upload" hx-encoding="multipart/form-data" hx-swap="none">
+  <p class="text-sm text-slate-500 mb-3">Paste leads (<code>Name, Phone</code> per line) or upload a CSV file.</p>
+  <div class="erp-field">
+    <label class="erp-label">Leads</label>
+    <textarea name="leads" class="erp-input" rows="8" placeholder="Ravi Kumar, 9876543210&#10;Priya Nair, 9123456780"></textarea>
+  </div>
+  <div class="erp-field">
+    <label class="erp-label">CSV file (optional)</label>
+    <input type="file" name="file" class="erp-input text-sm" accept=".csv,text/csv">
+    <p class="text-xs text-slate-500 mt-1">Columns: name, phone (header row optional)</p>
+  </div>
+  {{ formFooter('Import Leads') }}
+</form>

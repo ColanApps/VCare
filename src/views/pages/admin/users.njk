@@ -1,0 +1,49 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+{% block content %}
+{% call pageToolbar('User Management', 'Create and manage staff accounts') %}
+  {{ modalTrigger('Create User', '/admin/users/form', 'Create New User', 'lg') }}
+{% endcall %}
+
+<form method="GET" action="/admin/users" class="erp-filter-bar">
+  <div class="erp-field flex-1">
+    <label class="erp-label">Search Users</label>
+    <input type="text" name="q" value="{{ filters.q or '' }}" class="erp-input" placeholder="Name, email, employee ID...">
+  </div>
+  <button type="submit" class="erp-btn-secondary">Search</button>
+</form>
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>Employee ID</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Designation</th>
+          <th>Branch</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td class="font-mono text-xs">{{ user.employeeId }}</td>
+          <td class="font-medium">{{ user.firstName }} {{ user.lastName }}</td>
+          <td class="text-sm">{{ user.email }}</td>
+          <td><span class="erp-badge-neutral">{{ user.role.name }}</span></td>
+          <td>{% if user.designation %}{{ user.designation.name }}{% else %}—{% endif %}</td>
+          <td>{% if user.branch %}{{ user.branch.name }}{% else %}—{% endif %}</td>
+          <td>{% if user.isActive %}<span class="erp-badge-success">Active</span>{% else %}<span class="erp-badge-danger">Inactive</span>{% endif %}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="erp-empty-cell">No users found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "partials/pagination.njk" %}
+</div>
+{% endblock %}

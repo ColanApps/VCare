@@ -1,0 +1,186 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar(customer.firstName ~ ' ' ~ customer.lastName, 'UHID: ' ~ customer.uhid) %}
+  <div class="text-right">
+    <div class="text-2xl font-bold text-accent-600">{{ progress.percent }}%</div>
+    <div class="text-xs text-slate-500">Workflow Complete</div>
+  </div>
+{% endcall %}
+<div class="erp-stat-bar h-3 mb-6">
+  <div class="erp-stat-bar-fill" style="width: {{ progress.percent }}%"></div>
+</div>
+
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+  {% for step in scheduleSteps %}
+  <div class="erp-card p-3 text-center {% if stepsStatus[step] == 'COMPLETED' %}border-emerald-200 bg-emerald-50/50{% endif %}">
+    <div class="text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1">{{ stepLabels[step] }}</div>
+    {% if stepsStatus[step] == 'COMPLETED' %}
+    <span class="erp-badge-success">Done</span>
+    {% else %}
+    <span class="erp-badge-warning">Pending</span>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="erp-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Consultation Form</h3></div>
+    <div class="erp-card-body">
+      <form method="POST" action="/customer/schedule-pending/{{ customer.id }}/consultation" class="space-y-4">
+        <input type="hidden" name="consultationId" value="{{ consultationId }}">
+        <div><label class="erp-label">Chief Complaint</label><textarea name="chiefComplaint" class="erp-input" rows="2">{{ consultation.chiefComplaint or '' }}</textarea></div>
+        <div><label class="erp-label">Diagnosis</label><textarea name="diagnosis" class="erp-input" rows="2">{{ consultation.diagnosis or '' }}</textarea></div>
+        <div><label class="erp-label">Notes</label><textarea name="notes" class="erp-input" rows="2">{{ consultation.notes or '' }}</textarea></div>
+        <div><label class="erp-label">Recommendations</label><textarea name="recommendations" class="erp-input" rows="2">{{ consultation.recommendations or '' }}</textarea></div>
+        <button type="submit" class="erp-btn-primary">Save Consultation</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="erp-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Before / After Photos</h3></div>
+    <div class="erp-card-body space-y-4">
+      <form method="POST" action="/customer/schedule-pending/{{ customer.id }}/photo" enctype="multipart/form-data" class="space-y-3">
+        <input type="hidden" name="consultationId" value="{{ consultationId }}">
+        <input type="hidden" name="step" value="BEFORE_PHOTO">
+        <div><label class="erp-label">Before Photo</label><input type="file" name="photo" accept="image/*" class="erp-input" required></div>
+        <button type="submit" class="erp-btn-secondary w-full">Upload Before Photo</button>
+      </form>
+      <form method="POST" action="/customer/schedule-pending/{{ customer.id }}/photo" enctype="multipart/form-data" class="space-y-3 pt-3 border-t">
+        <input type="hidden" name="consultationId" value="{{ consultationId }}">
+        <input type="hidden" name="step" value="AFTER_PHOTO">
+        <div><label class="erp-label">After Photo</label><input type="file" name="photo" accept="image/*" class="erp-input" required></div>
+        <button type="submit" class="erp-btn-secondary w-full">Upload After Photo</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="erp-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Tricho Scan Test</h3></div>
+    <div class="erp-card-body">
+      <form method="POST" action="/customer/schedule-pending/{{ customer.id }}/trichoscan" class="erp-form-grid">
+        <input type="hidden" name="consultationId" value="{{ consultationId }}">
+        <div><label class="erp-label">Hair Density (/cm²)</label><input type="number" step="0.1" name="hairDensity" class="erp-input"></div>
+        <div><label class="erp-label">Hair Diameter (µm)</label><input type="number" step="0.1" name="hairDiameter" class="erp-input"></div>
+        <div><label class="erp-label">Follicle Count</label><input type="number" name="follicleCount" class="erp-input"></div>
+        <div class="col-span-full"><label class="erp-label">Scalp Condition</label><input type="text" name="scalpCondition" class="erp-input"></div>
+        <div class="col-span-full"><label class="erp-label">Findings</label><textarea name="findings" class="erp-input" rows="2"></textarea></div>
+        <div class="col-span-full"><button type="submit" class="erp-btn-primary">Record Trichoscan</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="erp-card">
+    <div class="erp-card-header flex justify-between items-center">
+      <h3 class="font-semibold">Treatment Slip</h3>
+      {% if treatmentPlan and treatmentPlan.totalSessions > 1 %}
+      <span class="erp-badge-neutral">Session {{ treatmentPlan.currentSessionNo }} of {{ treatmentPlan.totalSessions }}</span>
+      {% endif %}
+    </div>
+    <div class="erp-card-body">
+      {% if existingSlip and treatmentPlan %}
+      <div class="mb-4 pb-4 border-b border-surface-border">
+        <div class="flex justify-between items-center text-xs text-slate-500 mb-2">
+          <span class="font-mono">{{ existingSlip.slipNo }}</span>
+          {{ statusBadge(existingSlip.status) }}
+        </div>
+        <div class="flex justify-between items-center text-sm mb-2">
+          <span>{{ treatmentPlan.completedSessions }} of {{ treatmentPlan.totalSessions }} sessions complete</span>
+          <span class="font-semibold text-accent-600">{{ treatmentPlan.percent }}%</span>
+        </div>
+        <div class="erp-stat-bar h-2 mb-3">
+          <div class="erp-stat-bar-fill" style="width: {% if treatmentPlan.percent > 100 %}100{% else %}{{ treatmentPlan.percent }}{% endif %}%"></div>
+        </div>
+        {% if treatmentPlan.sessionRows and treatmentPlan.sessionRows.length %}
+        <ul class="space-y-1 max-h-32 overflow-y-auto">
+          {% for row in treatmentPlan.sessionRows %}
+          <li class="flex items-center justify-between text-xs rounded px-2 py-1.5 {% if row.status == 'DONE' %}bg-emerald-50{% elif row.status == 'BOOKED' %}bg-amber-50{% else %}bg-slate-50{% endif %}">
+            <span>Session {{ row.sessionNo }}</span>
+            {% if row.status == 'DONE' %}<span class="erp-badge-success text-[10px]">Done</span>
+            {% elif row.status == 'BOOKED' %}<span class="erp-badge-warning text-[10px]">Booked</span>
+            {% else %}<span class="erp-badge-neutral text-[10px]">Pending</span>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        {% if treatmentPlan.nextSessionNo %}
+        <p class="text-xs text-amber-700 mt-2">Next session: {{ treatmentPlan.nextSessionNo }}</p>
+        {% endif %}
+      </div>
+      {% endif %}
+      <form method="POST" action="/customer/schedule-pending/{{ customer.id }}/treatment-slip" id="slip-form">
+        <input type="hidden" name="consultationId" value="{{ consultationId }}">
+        <input type="hidden" name="treatments" id="treatments-json" value="[]">
+        <div class="space-y-2 mb-4 max-h-48 overflow-y-auto">
+          {% for t in treatments %}
+          <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
+            <input type="checkbox" class="treatment-check rounded border-slate-300 text-accent-600" data-code="{{ t.code }}" data-name="{{ t.name }}" data-price="{{ t.basePrice }}">
+            <span class="text-sm">{{ t.name }}</span>
+            <span class="text-xs text-slate-400 ml-auto">{{ t.basePrice | currency }}</span>
+          </label>
+          {% endfor %}
+        </div>
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div><label class="erp-label">Sessions</label><input type="number" name="sessions" value="1" min="1" class="erp-input"></div>
+          <div><label class="erp-label">Notes</label><input type="text" name="notes" class="erp-input"></div>
+        </div>
+        <button type="submit" class="erp-btn-primary">Generate Treatment Slip</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% if progress.percent >= 100 %}
+<div class="erp-card mt-6 border-emerald-200 bg-emerald-50/50">
+  <div class="erp-card-body flex items-center justify-between">
+    <div>
+      <h3 class="font-semibold text-emerald-800">Workflow Complete</h3>
+      <p class="text-sm text-emerald-700">All schedule-pending steps are done. Customer is ready for billing.</p>
+    </div>
+    <a href="/billing/create?customerId={{ customer.id }}" class="erp-btn-primary">Create Bill</a>
+  </div>
+</div>
+{% else %}
+<div class="erp-card mt-6">
+  <div class="erp-card-header"><h3 class="font-semibold">Regular Consultation</h3></div>
+  <div class="erp-card-body">
+    <form method="POST" action="/customer/schedule-pending/{{ customer.id }}/regular-consultation" class="space-y-4">
+      <input type="hidden" name="consultationId" value="{{ consultationId }}">
+      <div><label class="erp-label">Diagnosis Update</label><textarea name="diagnosis" class="erp-input" rows="2">{{ consultation.diagnosis or '' }}</textarea></div>
+      <div><label class="erp-label">Session Notes</label><textarea name="notes" class="erp-input" rows="2">{{ consultation.notes or '' }}</textarea></div>
+      <div><label class="erp-label">Recommendations</label><textarea name="recommendations" class="erp-input" rows="2">{{ consultation.recommendations or '' }}</textarea></div>
+      <button type="submit" class="erp-btn-primary">Save Regular Consultation</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% if customer.photos.length %}
+<div class="erp-card mt-6">
+  <div class="erp-card-header"><h3 class="font-semibold">Uploaded Photos</h3></div>
+  <div class="erp-card-body grid grid-cols-2 md:grid-cols-4 gap-4">
+    {% for photo in customer.photos %}
+    <div class="rounded-lg overflow-hidden border border-surface-border">
+      <img src="{{ photo.filePath }}" alt="{{ photo.type }}" class="w-full h-32 object-cover">
+      <div class="p-2 text-xs text-slate-500">{{ photo.type }} · {{ photo.takenAt | date }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('slip-form')?.addEventListener('submit', (e) => {
+    const selected = [...document.querySelectorAll('.treatment-check:checked')].map(cb => ({
+      code: cb.dataset.code, name: cb.dataset.name, price: parseFloat(cb.dataset.price)
+    }));
+    document.getElementById('treatments-json').value = JSON.stringify(selected);
+    if (!selected.length) { e.preventDefault(); alert('Select at least one treatment'); }
+  });
+</script>
+{% endblock %}

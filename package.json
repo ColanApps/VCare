@@ -1,0 +1,44 @@
+{
+  "name": "vcare-erp",
+  "version": "1.0.0",
+  "description": "VCare Clinic Process ERP - Server-rendered enterprise platform",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "db:generate": "prisma generate",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push",
+    "db:seed": "node prisma/seed.js",
+    "db:sync-permissions": "node prisma/sync-permissions.js",
+    "db:setup": "prisma db push && node prisma/seed.js && node prisma/sync-permissions.js",
+    "db:studio": "prisma studio",
+    "build:css": "tailwindcss -i ./src/public/css/input.css -o ./src/public/css/app.css --minify",
+    "build": "npm run build:css && prisma generate",
+    "smoke": "node scripts/smoke-workflow.mjs",
+    "spec:local-first": "node scripts/generate-local-first-spec.mjs"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.9.0",
+    "bcryptjs": "^3.0.2",
+    "compression": "^1.8.0",
+    "date-fns": "^4.1.0",
+    "express-mysql-session": "^3.0.3",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "express-session": "^1.18.1",
+    "helmet": "^8.1.0",
+    "mysql2": "^3.14.1",
+    "multer": "^2.0.1",
+    "nodemailer": "^7.0.13",
+    "nunjucks": "^3.2.4",
+    "pdfkit": "^0.19.1",
+    "uuid": "^11.1.0",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "prisma": "^6.9.0",
+    "tailwindcss": "^3.4.17"
+  }
+}

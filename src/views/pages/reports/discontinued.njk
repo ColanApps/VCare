@@ -1,0 +1,30 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Discontinued Clients') %}
+{% endcall %}
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+    <thead><tr><th>UHID</th><th>Name</th><th>Branch</th><th>Status</th><th>Bills</th><th>Appointments</th><th>Last Updated</th></tr></thead>
+    <tbody>
+      {% for c in customers %}
+      <tr>
+        <td class="font-mono text-xs">{{ c.uhid }}</td>
+        <td><a href="/customer/{{ c.id }}" class="text-accent-600 hover:underline">{{ c.firstName }} {{ c.lastName }}</a></td>
+        <td>{{ c.branch.name }}</td>
+        <td>{{ statusBadge(c.status) }}</td>
+        <td>{{ c._count.bills }}</td>
+        <td>{{ c._count.appointments }}</td>
+        <td class="text-xs text-slate-500">{{ c.updatedAt | date }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="erp-empty-cell">No discontinued clients</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

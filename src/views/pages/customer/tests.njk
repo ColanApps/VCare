@@ -1,0 +1,68 @@
+{% extends "layouts/main.njk" %}
+
+{% from "macros/components.njk" import statusBadge %}
+
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+
+{% block content %}
+
+{% call pageToolbar('HMA / DSA Tests', 'Hair mineral and digital scalp analysis results') %}
+
+  {{ modalTrigger('Record Test', '/customer/treatment/tests/form', 'New Test Result', 'lg') }}
+
+{% endcall %}
+
+
+
+<div class="flex gap-2 mb-4">
+
+  <a href="/customer/treatment/tests" class="erp-btn-secondary text-sm {% if selectedType == 'ALL' %}ring-2 ring-accent-500{% endif %}">All</a>
+
+  <a href="/customer/treatment/tests?type=HMA" class="erp-btn-secondary text-sm {% if selectedType == 'HMA' %}ring-2 ring-accent-500{% endif %}">HMA</a>
+
+  <a href="/customer/treatment/tests?type=DSA" class="erp-btn-secondary text-sm {% if selectedType == 'DSA' %}ring-2 ring-accent-500{% endif %}">DSA</a>
+
+</div>
+
+
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+
+    <thead><tr><th>Test No</th><th>Date</th><th>Customer</th><th>Type</th><th>Findings</th><th>Status</th></tr></thead>
+
+    <tbody>
+
+      {% for t in tests %}
+
+      <tr>
+
+        <td class="font-mono text-xs">{{ t.testNo }}</td>
+
+        <td class="text-xs">{{ t.testedAt | datetime }}</td>
+
+        <td><a href="/customer/treatment/{{ t.customer.id }}" class="text-accent-600 hover:underline">{{ t.customer.firstName }} {{ t.customer.lastName }}</a></td>
+
+        <td><span class="erp-badge-neutral">{{ t.type }}</span></td>
+
+        <td class="text-sm max-w-md truncate">{{ t.findings or '—' }}</td>
+
+        <td>{{ statusBadge(t.status) }}</td>
+
+      </tr>
+
+      {% else %}
+
+      <tr><td colspan="6" class="erp-empty-cell">No tests recorded</td></tr>
+
+      {% endfor %}
+
+    </tbody>
+
+  </table>
+  </div>
+</div>
+
+{% endblock %}
+

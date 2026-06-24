@@ -1,0 +1,46 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Inventory Aging Report') %}
+{% endcall %}
+<p class="text-sm text-slate-500 mb-6">{{ allItems }} stock lines analyzed by last movement date</p>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  {% for s in summary %}
+  <div class="erp-kpi">
+    <div class="erp-kpi-label">{{ s.bucket }} days</div>
+    <div class="erp-kpi-value mt-1">{{ s.units | number }} units</div>
+    <div class="text-xs text-slate-400 mt-1">{{ s.value | currency }} · {{ s.lines }} lines</div>
+  </div>
+  {% endfor %}
+</div>
+
+{% for bucket in ['0-30', '31-60', '61-90', '90+'] %}
+{% set items = buckets[bucket] %}
+<div class="erp-card mb-6 erp-table-card">
+  <div class="erp-card-header"><h3 class="font-semibold">{{ bucket }} Days ({{ items | length }} lines)</h3></div>
+  {% if items | length > 0 %}
+  <div class="overflow-x-auto">
+  <table class="erp-table text-sm">
+    <thead><tr><th>Branch</th><th>Product</th><th>SKU</th><th>Batch</th><th>Qty</th><th>Value</th><th>Age (days)</th></tr></thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td>{{ item.branch.name }}</td>
+        <td class="font-medium">{{ item.product.name }}</td>
+        <td class="font-mono text-xs">{{ item.product.sku }}</td>
+        <td class="font-mono text-xs">{{ item.batchNo or '—' }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ item.value | currency }}</td>
+        <td class="{% if item.ageDays > 90 %}text-red-600 font-medium{% elif item.ageDays > 60 %}text-amber-600{% endif %}">{{ item.ageDays }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="erp-card-body text-center text-slate-400 py-4">No stock in this bucket</div>
+  {% endif %}
+</div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,124 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar, taskRow %}
+{% block content %}
+{% call pageToolbar('My Tasks', queue.totalTasks ~ ' pending · ' ~ (queue.role | replace('_', ' '))) %}
+  <a href="/dashboard/role-home" class="erp-btn-secondary text-sm">Role Home</a>
+  <a href="/dashboard" class="erp-btn-secondary text-sm">Executive Dashboard</a>
+{% endcall %}
+
+{% if queue.summary %}
+<div class="erp-task-kpi-strip">
+  <div class="erp-task-kpi">
+    <span class="erp-task-kpi-dot erp-task-kpi-dot-urgent"></span>
+    <div>
+      <div class="erp-task-kpi-value">{{ queue.summary.urgent }}</div>
+      <div class="erp-task-kpi-label">Urgent</div>
+    </div>
+  </div>
+  <div class="erp-task-kpi">
+    <span class="erp-task-kpi-dot erp-task-kpi-dot-high"></span>
+    <div>
+      <div class="erp-task-kpi-value">{{ queue.summary.high }}</div>
+      <div class="erp-task-kpi-label">High</div>
+    </div>
+  </div>
+  <div class="erp-task-kpi">
+    <span class="erp-task-kpi-dot erp-task-kpi-dot-medium"></span>
+    <div>
+      <div class="erp-task-kpi-value">{{ queue.summary.medium }}</div>
+      <div class="erp-task-kpi-label">Medium</div>
+    </div>
+  </div>
+  <div class="erp-task-kpi">
+    <span class="erp-task-kpi-dot erp-task-kpi-dot-low"></span>
+    <div>
+      <div class="erp-task-kpi-value">{{ queue.summary.low }}</div>
+      <div class="erp-task-kpi-label">Low</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="erp-workflow-rail">
+  <div class="erp-workflow-rail-header">
+    <div>
+      <h3 class="font-semibold text-slate-900">{{ guide.title }}</h3>
+      <p class="text-xs text-slate-500 mt-0.5">Guided workflow — follow each step in order</p>
+    </div>
+    <span class="erp-badge-info text-[10px]">{{ guide.chain | length }} steps</span>
+  </div>
+  <div class="erp-workflow-steps">
+    {% for step in guide.chain %}
+    <div class="erp-workflow-step">
+      <a href="{{ step.url }}" class="erp-workflow-step-link">
+        <span class="erp-workflow-step-num">{{ loop.index }}</span>
+        <span class="erp-workflow-step-label">{{ step.label }}</span>
+      </a>
+      {% if not loop.last %}<span class="erp-workflow-connector" aria-hidden="true"></span>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% if queue.sections | length == 0 %}
+<div class="erp-task-inbox">
+  <div class="erp-task-empty">
+    <div class="erp-task-empty-icon">
+      <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+    <p class="text-slate-600 font-medium">You're all caught up</p>
+    <p class="text-sm text-slate-500 mt-1">No pending tasks for your role right now.</p>
+    <a href="/dashboard" class="erp-btn-primary text-sm mt-5 inline-flex">Go to Dashboard</a>
+  </div>
+</div>
+{% else %}
+<div class="erp-task-inbox" x-data="{ filter: 'all' }">
+  {% if queue.sections | length > 1 %}
+  <div class="erp-task-filters">
+    <button type="button" class="erp-task-filter" :class="{ 'active': filter === 'all' }" @click="filter = 'all'">
+      All <span class="opacity-75">({{ queue.totalTasks }})</span>
+    </button>
+    {% for section in queue.sections %}
+    <button type="button" class="erp-task-filter" :class="{ 'active': filter === '{{ section.slug }}' }" @click="filter = '{{ section.slug }}'">
+      {{ section.title }} <span class="opacity-75">({{ section.tasks | length }})</span>
+    </button>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% for section in queue.sections %}
+  <div class="erp-task-section" x-show="filter === 'all' || filter === '{{ section.slug }}'" x-cloak>
+    <div class="erp-task-section-header">
+      <div class="erp-task-section-icon">
+        {% if section.icon == 'phone' %}
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+        {% elif section.icon == 'stethoscope' %}
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+        {% elif section.icon == 'wallet' %}
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+        {% elif section.icon == 'package' %}
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+        {% elif section.icon == 'building' %}
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+        {% elif section.icon == 'briefcase' %}
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        {% else %}
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        {% endif %}
+      </div>
+      <div class="min-w-0 flex-1">
+        <div class="erp-task-section-title">{{ section.title }}</div>
+        <div class="erp-task-section-meta">{{ section.tasks | length }} task{% if section.tasks | length != 1 %}s{% endif %}</div>
+      </div>
+      <span class="erp-badge-neutral shrink-0">{{ section.tasks | length }}</span>
+    </div>
+    <div>
+      {% for t in section.tasks %}
+      {{ taskRow(t) }}
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

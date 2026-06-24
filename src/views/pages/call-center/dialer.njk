@@ -1,0 +1,119 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Dialer', 'Lookup → book → clinical workflow') %}
+  <a href="/call-center" class="erp-btn-secondary text-sm">Call Center</a>
+  <a href="/dashboard/my-tasks" class="erp-btn-secondary text-sm">My Tasks</a>
+{% endcall %}
+
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+  <div class="erp-kpi"><div class="erp-kpi-label">Today (CC)</div><div class="erp-kpi-value mt-1">{{ dashboard.todayAppts }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Pending F/U</div><div class="erp-kpi-value mt-1">{{ dashboard.pendingFu }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Recent Leads</div><div class="erp-kpi-value mt-1">{{ dashboard.recentLeads | length }}</div></div>
+</div>
+
+<div class="erp-filter-bar mb-6">
+  <form method="GET" action="/call-center/dialer" class="">
+    <div class="erp-form-grid">
+    <div class="erp-field">
+      <label class="erp-label">Branch</label>
+      <select name="branchId" class="erp-select">
+        {% for b in branches %}<option value="{{ b.id }}" {% if b.id == branchId %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Date</label>
+      <input type="date" name="date" value="{{ filters.date or '' }}" class="erp-input">
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Consultant</label>
+      <select name="consultantId" class="erp-select">
+        <option value="">Any</option>
+        {% for c in consultants %}<option value="{{ c.id }}" {% if filters.consultantId == c.id %}selected{% endif %}>{{ c.firstName }} {{ c.lastName }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="erp-field flex items-end">
+      <button type="submit" class="erp-btn-secondary w-full">Refresh Slots</button>
+    </div>
+    </div>
+  </form>
+</div>
+
+<div class="erp-triple-grid">
+  <div class="xl:col-span-2 erp-card">
+    <div class="erp-card-header"><h3 class="font-semibold text-slate-900">Book Appointment</h3></div>
+    <form method="POST" action="/call-center/dialer/book" class="erp-card-body space-y-4" id="dialer-form">
+      <div class="erp-form-grid">
+        <div class="erp-field">
+          <label class="erp-label">Phone *</label>
+          <input type="tel" name="phone" id="dialer-phone" class="erp-input" required placeholder="10-digit mobile">
+        </div>
+        <div class="erp-field flex items-end">
+          <button type="button" id="lookup-btn" class="erp-btn-secondary w-full">Lookup</button>
+        </div>
+        <div class="erp-field sm:col-span-2">
+          <label class="erp-label">Customer Name</label>
+          <input type="text" name="customerName" id="dialer-name" class="erp-input" placeholder="For new leads">
+        </div>
+        <input type="hidden" name="branchId" value="{{ branchId }}">
+        <div class="erp-field sm:col-span-2">
+          <label class="erp-label">Consultant</label>
+          <select name="consultantId" class="erp-select">
+            <option value="">Any</option>
+            {% for c in consultants %}<option value="{{ c.id }}" {% if filters.consultantId == c.id %}selected{% endif %}>{{ c.firstName }} {{ c.lastName }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="erp-field sm:col-span-2">
+          <label class="erp-label">Slot *</label>
+          <select name="scheduledAt" class="erp-select" required>
+            <option value="">Select time slot</option>
+            {% for s in slots %}<option value="{{ s.time }}">{{ s.label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="erp-field">
+          <label class="erp-label">Category</label>
+          <select name="category" class="erp-select"><option value="HAIR">Hair</option><option value="SKIN">Skin</option></select>
+        </div>
+        <div class="erp-field">
+          <label class="erp-label">Campaign</label>
+          <input type="text" name="campaign" class="erp-input" placeholder="Optional">
+        </div>
+      </div>
+      <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="createFollowUp" value="on"> Create lead follow-up if new customer</label>
+      <button type="submit" class="erp-btn-primary w-full">Book & Open Clinical Workflow</button>
+    </form>
+  </div>
+
+  <div class="erp-card h-fit self-start">
+    <div class="erp-card-header"><h3 class="font-semibold text-slate-900">Recent Leads</h3></div>
+    <ul class="divide-y divide-surface-border">
+      {% for c in dashboard.recentLeads %}
+      <li class="px-5 py-3 flex justify-between items-center text-sm">
+        <div>
+          <div class="font-medium">{{ c.firstName }} {{ c.lastName }}</div>
+          <div class="text-xs text-slate-500">{{ c.phone }} · {{ c.branch.name }}</div>
+        </div>
+        <a href="/clinical/workflow/{{ c.id }}" class="text-accent-600 text-xs">Flow →</a>
+      </li>
+      {% else %}
+      <li class="px-5 py-6 text-sm text-slate-500">No recent leads.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('lookup-btn')?.addEventListener('click', async () => {
+  const phone = document.getElementById('dialer-phone').value;
+  const res = await fetch('/call-center/dialer/lookup', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'phone=' + encodeURIComponent(phone) });
+  const data = await res.json();
+  if (data.found && data.customer) {
+    document.getElementById('dialer-name').value = data.customer.firstName + ' ' + data.customer.lastName;
+  } else {
+    alert('New lead — enter name and book.');
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+<p class="mb-3"><a href="/customer/{{ customer.id }}" class="text-sm text-accent-600 hover:underline">← Customer Profile</a></p>
+{% call pageToolbar('Treatment History — ' ~ customer.firstName ~ ' ' ~ customer.lastName, customer.uhid ~ ' · ' ~ customer.branch.name) %}
+{% endcall %}
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+  <div class="erp-kpi"><div class="erp-kpi-label">Visits</div><div class="erp-kpi-value mt-1">{{ visits | length }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Tests</div><div class="erp-kpi-value mt-1">{{ tests | length }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Feedback</div><div class="erp-kpi-value mt-1">{{ feedbacks | length }}</div></div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Visit Timeline</h3></div>
+    <div class="divide-y divide-surface-border max-h-96 overflow-y-auto">
+      {% for v in visits %}
+      <div class="p-4">
+        <div class="flex justify-between items-start">
+          <span class="font-mono text-xs">{{ v.visitNo }}</span>
+          <span class="text-xs text-slate-500">{{ v.visitedAt | date }}</span>
+        </div>
+        <div class="text-sm mt-1 flex flex-wrap items-center gap-2">
+          <span>{{ v.visitType }} · Session {{ v.sessionNo }}</span>
+          {% if v.procedure %}
+          <a href="/appointments/procedures/{{ v.procedure.id }}" class="erp-badge-neutral hover:bg-slate-200 text-[10px]">{{ v.procedure.procedureNo }}</a>
+          {% if v.procedure.treatmentSlip and v.procedure.treatmentSlip.sessions > 1 %}
+          <span class="text-xs text-slate-400">of {{ v.procedure.treatmentSlip.sessions }}</span>
+          {% endif %}
+          {% endif %}
+        </div>
+        {% if v.treatmentNotes %}<p class="text-sm text-slate-600 mt-1">{{ v.treatmentNotes }}</p>{% endif %}
+        {% if v.feedback %}<div class="text-xs text-amber-600 mt-1">★ {{ v.feedback.rating }} — {{ v.feedback.feedback | truncate(80) }}</div>{% endif %}
+      </div>
+      {% else %}
+      <div class="p-6 text-center text-slate-400">No visits</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <div class="erp-card erp-table-card">
+      <div class="erp-card-header"><h3 class="font-semibold">HMA / DSA Tests</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table text-sm">
+        <thead><tr><th>Test</th><th>Type</th><th>Date</th><th>Findings</th></tr></thead>
+        <tbody>
+          {% for t in tests %}
+          <tr>
+            <td class="font-mono text-xs">{{ t.testNo }}</td>
+            <td>{{ t.type }}</td>
+            <td class="text-xs">{{ t.testedAt | date }}</td>
+            <td class="truncate max-w-[200px]">{{ t.findings or '—' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="text-center text-slate-400 py-4">No tests</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div></div>
+
+    <div class="erp-card">
+      <div class="erp-card-header"><h3 class="font-semibold">Feedback</h3></div>
+      <div class="divide-y divide-surface-border">
+        {% for f in feedbacks %}
+        <div class="p-4 text-sm">
+          <div class="flex justify-between"><span>{% if f.rating %}{{ f.rating }} ★{% endif %}</span><span class="text-xs text-slate-500">{{ f.submittedAt | date }}</span></div>
+          <p class="mt-1">{{ f.feedback }}</p>
+        </div>
+        {% else %}
+        <div class="p-6 text-center text-slate-400">No feedback</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

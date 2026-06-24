@@ -1,0 +1,34 @@
+{% extends "layouts/portal.njk" %}
+{% from "macros/ui.njk" import pageToolbar, hubTile %}
+{% block content %}
+{% call pageToolbar('Branch Manager Portal') %}
+{% endcall %}
+
+<div class="erp-kpi-grid mb-8">
+  <div class="erp-kpi"><div class="erp-kpi-label">Month Sales</div><div class="erp-kpi-value mt-1">{{ monthSales | currency }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Active Branches</div><div class="erp-kpi-value mt-1">{{ branches | length }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Open Tickets</div><div class="erp-kpi-value mt-1">{{ openTickets }}</div></div>
+</div>
+
+<h2 class="erp-section-title">Workflows</h2>
+<div class="erp-hub-grid mb-8">
+  {{ hubTile('/dashboard/branch', 'Branch Dashboard', 'Daily sales, appointments and branch KPIs') }}
+  {{ hubTile('/reports/branch-comparison', 'Branch Reports', 'Multi-branch performance comparison') }}
+  {{ hubTile('/reports/consultants', 'Consultant Reports', 'Revenue and target achievement by consultant') }}
+  {{ hubTile('/finance', 'Finance Hub', 'Collections, day close & GST workflows') }}
+</div>
+
+<div class="erp-card erp-table-card">
+  <div class="erp-card-header"><h3 class="font-semibold">Branches</h3></div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead><tr><th>Branch</th><th>Type</th><th></th></tr></thead>
+      <tbody>
+        {% for b in branches %}
+        <tr><td>{{ b.name }}</td><td>{{ b.type }}</td><td><a href="/dashboard/branch?branchId={{ b.id }}" class="text-accent-600 text-xs font-medium">Dashboard →</a></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

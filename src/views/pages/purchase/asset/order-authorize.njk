@@ -1,0 +1,29 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Asset PO Authorization') %}
+{% endcall %}
+<div class="space-y-4">
+  {% for o in orders %}
+  <div class="erp-card">
+    <div class="erp-card-header">
+      <div><h3 class="font-semibold font-mono">{{ o.apoNo }}</h3><span class="text-xs text-slate-500">{{ o.vendor.name if o.vendor else 'No vendor' }}</span></div>
+      <div class="text-right"><div class="font-semibold">{{ o.totalAmount | currency }}</div>{{ statusBadge(o.status) }}</div>
+    </div>
+    <div class="erp-card-body">
+      <div class="overflow-x-auto">
+      <table class="erp-table text-sm mb-3"><thead><tr><th>Description</th><th>Qty</th><th>Unit Cost</th><th>Total</th></tr></thead>
+      <tbody>{% for item in o.items %}<tr><td>{{ item.description }}</td><td>{{ item.quantity }}</td><td>{{ item.unitCost | currency }}</td><td>{{ item.totalAmount | currency }}</td></tr>{% endfor %}</tbody></table>
+      </div>
+      <div class="flex gap-2">
+        <form method="POST" action="/purchase/asset-po/{{ o.id }}/authorize"><input type="hidden" name="action" value="approve"><button class="erp-btn-primary text-sm">Approve</button></form>
+        <form method="POST" action="/purchase/asset-po/{{ o.id }}/authorize"><input type="hidden" name="action" value="reject"><button class="erp-btn-secondary text-sm text-red-600">Reject</button></form>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="erp-card"><div class="erp-card-body erp-empty-cell">No asset POs pending authorization</div></div>
+  {% endfor %}
+</div>
+{% endblock %}

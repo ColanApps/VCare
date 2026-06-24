@@ -1,0 +1,115 @@
+<form method="POST" action="/billing/create" id="bill-form" class="erp-modal-form"
+  hx-post="/billing/create" hx-swap="none">
+  {% if preselectedProcedure %}<input type="hidden" name="procedureId" value="{{ preselectedProcedure }}">{% endif %}
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <div class="lg:col-span-2 space-y-5">
+      <div class="erp-card">
+        <div class="erp-card-header"><h3 class="font-semibold text-sm">Bill Details</h3></div>
+        <div class="erp-card-body erp-form-grid">
+          <div class="erp-field sm:col-span-2">
+            <label class="erp-label">Customer *</label>
+            <select name="customerId" id="customer-select" class="erp-select" required>
+              <option value="" data-category="ALL">Select customer</option>
+              {% for c in customers %}
+              <option value="{{ c.id }}" data-category="{{ c.category }}" {% if preselectedCustomer == c.id %}selected{% endif %}>{{ c.firstName }} {{ c.lastName }} ({{ c.uhid }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="erp-field">
+            <label class="erp-label">Payment Mode</label>
+            <select name="paymentMode" class="erp-select">
+              <option value="CASH">Cash</option><option value="CARD">Card</option><option value="UPI">UPI</option>
+              <option value="BANK_TRANSFER">Bank Transfer</option><option value="CHEQUE">Cheque</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="erp-card">
+        <div class="erp-card-header">
+          <h3 class="font-semibold text-sm">Line Items</h3>
+          <span class="text-xs text-accent-600">Auto-discount applied</span>
+        </div>
+        <div class="erp-card-body">
+          <div class="flex flex-wrap gap-2 mb-4 p-3 bg-slate-50 rounded-xl">
+            <select id="item-type" class="erp-select text-sm w-auto"><option value="TREATMENT">Treatment</option><option value="PRODUCT">Product</option></select>
+            <select id="item-select" class="erp-select text-sm flex-1 min-w-[200px]">
+              <optgroup label="Treatments" id="treatments-group">
+                {% for t in treatments %}<option value="TREATMENT|{{ t.code }}|{{ t.name }}|{{ t.basePrice }}|{{ t.category }}">{{ t.name }} — {{ t.basePrice | currency }}</option>{% endfor %}
+              </optgroup>
+              <optgroup label="Products" id="products-group">
+                {% for p in products %}<option value="PRODUCT|{{ p.sku }}|{{ p.name }}|{{ p.mrp }}|{{ p.category or 'ALL' }}">{{ p.name }} — {{ p.mrp | currency }}</option>{% endfor %}
+              </optgroup>
+            </select>
+            <input type="number" id="item-qty" class="erp-input w-20 text-sm" value="1" min="1">
+            <button type="button" onclick="addBillItem()" class="erp-btn-secondary text-sm">Add Item</button>
+          </div>
+          <table class="erp-table">
+            <thead><tr><th>Item</th><th>Qty</th><th>Unit Price</th><th>Discount</th><th>Tax</th><th>Total</th><th></th></tr></thead>
+            <tbody id="bill-items-body"><tr><td colspan="7" class="erp-empty-cell">Add items to the bill</td></tr></tbody>
+          </table>
+          <input type="hidden" name="items" id="bill-items-json" value="[]">
+        </div>
+      </div>
+    </div>
+
+    <div class="space-y-5">
+      <div class="erp-card">
+        <div class="erp-card-header"><h3 class="font-semibold text-sm">Summary</h3></div>
+        <div class="erp-card-body space-y-3">
+          <div class="flex justify-between text-sm"><span class="text-slate-500">Subtotal</span><span id="bill-subtotal" class="tabular-nums">₹0</span></div>
+          <div class="flex justify-between text-sm text-emerald-600"><span>Line Discounts</span><span id="bill-line-discount" class="tabular-nums">₹0</span></div>
+          <div class="flex justify-between text-sm"><span class="text-slate-500">Tax</span><span id="bill-tax" class="tabular-nums">₹0</span></div>
+          <div class="erp-field">
+            <label class="erp-label">Additional Discount</label>
+            <input type="number" name="discount" id="bill-extra-discount" class="erp-input" value="0" step="0.01" data-currency onchange="billCalculator.render()">
+          </div>
+          <div class="flex justify-between font-semibold text-lg pt-3 border-t border-surface-border">
+            <span>Total</span><span id="bill-total" class="tabular-nums">₹0</span>
+          </div>
+          <div class="erp-field">
+            <label class="erp-label">Amount Paid Now</label>
+            <input type="number" name="paidAmount" class="erp-input" value="0" step="0.01" data-currency>
+          </div>
+          <div class="erp-field">
+            <label class="erp-label">Reference No</label>
+            <input type="text" name="referenceNo" class="erp-input" placeholder="Txn/Cheque ref">
+          </div>
+          <div class="border-t border-surface-border pt-4" x-data="{ emi: false }">
+            <label class="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" name="useInstallmentPlan" x-model="emi" class="rounded border-slate-300 text-accent-600">
+              <span>Convert balance to installment plan</span>
+            </label>
+            <div x-show="emi" class="mt-3 space-y-3" x-cloak>
+              <div class="erp-field"><label class="erp-label">Interest % p.a.</label><input type="number" name="installmentRate" class="erp-input" value="12" step="0.01"></div>
+              <div class="erp-field"><label class="erp-label">Tenure (months)</label><input type="number" name="installmentTenure" class="erp-input" value="6" min="1" max="36"></div>
+            </div>
+          </div>
+          <button type="submit" class="erp-btn-primary w-full mt-2">Create Bill</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+<script>
+{% if prefillItems and prefillItems.length %}
+document.addEventListener('DOMContentLoaded', async () => {
+  const custCategory = document.getElementById('customer-select')?.selectedOptions[0]?.dataset.category || 'ALL';
+  for (const item of {{ prefillItems | dump | safe }}) {
+    await billCalculator.addItem({ ...item, category: custCategory }, custCategory);
+  }
+});
+{% endif %}
+async function addBillItem() {
+  const sel = document.getElementById('item-select');
+  const qty = parseInt(document.getElementById('item-qty').value, 10) || 1;
+  const parts = sel.value.split('|');
+  const custSel = document.getElementById('customer-select');
+  const custCategory = custSel.selectedOptions[0]?.dataset.category || 'ALL';
+  await billCalculator.addItem({
+    itemType: parts[0], itemCode: parts[1], itemName: parts[2],
+    quantity: qty, unitPrice: parseFloat(parts[3]), category: parts[4] || custCategory,
+    discount: 0, taxRate: 18,
+  }, custCategory);
+}
+</script>

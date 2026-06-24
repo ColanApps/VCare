@@ -1,0 +1,52 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Procedure Booking') %}
+{% endcall %}
+
+<div class="erp-card max-w-3xl">
+  <form method="POST" action="/appointments/procedures/book" class="erp-card-body">
+    <div class="erp-form-grid">
+      <div>
+        <label class="erp-label">Customer *</label>
+        <select name="customerId" class="erp-select" required>
+          <option value="">Select customer</option>
+          {% for c in customers %}
+          <option value="{{ c.id }}" {% if preselectedCustomer == c.id %}selected{% endif %}>{{ c.firstName }} {{ c.lastName }} ({{ c.uhid }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Treatment</label>
+        <select name="treatmentId" class="erp-select">
+          <option value="">Select treatment</option>
+          {% for t in treatments %}
+          <option value="{{ t.id }}">{{ t.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Performer</label>
+        <select name="performerId" class="erp-select">
+          <option value="">Default (current user)</option>
+          {% for p in performers %}
+          <option value="{{ p.id }}">{{ p.firstName }} {{ p.lastName }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Scheduled At *</label>
+        <input type="datetime-local" name="scheduledAt" class="erp-input" required>
+      </div>
+      <div class="col-span-full">
+        <label class="erp-label">Notes</label>
+        <textarea name="notes" class="erp-input" rows="2" placeholder="Procedure notes..."></textarea>
+      </div>
+    </div>
+    <div class="mt-6 flex gap-3">
+      <button type="submit" class="erp-btn-primary">Book Procedure</button>
+      <a href="/appointments/procedures" class="erp-btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

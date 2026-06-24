@@ -1,0 +1,46 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/appointments/fix-new" class="erp-modal-form"
+  hx-post="/appointments/fix-new"
+  hx-swap="none">
+  <div class="erp-form-grid">
+    <div class="erp-field col-span-full">
+      <label class="erp-label">Customer *</label>
+      <select name="customerId" class="erp-select" required>
+        <option value="">Select customer</option>
+        {% for c in customers %}
+        <option value="{{ c.id }}">{{ c.uhid }} — {{ c.firstName }} {{ c.lastName }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Branch *</label>
+      <select name="branchId" class="erp-select" required>
+        {% for b in branches %}
+        <option value="{{ b.id }}" {% if b.id == user.branchId %}selected{% endif %}>{{ b.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Consultant</label>
+      <select name="consultantId" class="erp-select">
+        <option value="">Default (current user)</option>
+        {% for u in consultants %}
+        <option value="{{ u.id }}">{{ u.firstName }} {{ u.lastName }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Type</label>
+      <select name="type" class="erp-select">
+        <option value="CONSULTATION">Consultation</option>
+        <option value="TREATMENT">Treatment</option>
+        <option value="FOLLOW_UP">Follow Up</option>
+      </select>
+    </div>
+    <div class="erp-field col-span-full">
+      <label class="erp-label">Scheduled At *</label>
+      <input type="datetime-local" name="scheduledAt" class="erp-input" required>
+    </div>
+  </div>
+  {{ formFooter('/appointments') }}
+</form>

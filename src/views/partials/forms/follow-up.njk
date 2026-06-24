@@ -1,0 +1,39 @@
+{% from "macros/ui.njk" import formFooter %}
+<form method="POST" action="/appointments/follow-ups" class="erp-modal-form"
+  hx-post="/appointments/follow-ups" hx-swap="none">
+  <div class="erp-form-grid">
+    <div class="erp-field">
+      <label class="erp-label">Customer *</label>
+      <select name="customerId" class="erp-select" required>
+        <option value="">Select customer</option>
+        {% for c in customers %}<option value="{{ c.id }}">{{ c.firstName }} {{ c.lastName }} ({{ c.uhid }})</option>{% endfor %}
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Type</label>
+      <select name="type" class="erp-select" required>
+        <option value="PENDING_ADVANCE">Pending Advance</option>
+        <option value="SUPPLEMENTS">Supplements</option>
+        <option value="NOT_JOINED">Not Joined</option>
+        <option value="TREATMENT">Treatment</option>
+        <option value="REGULAR">Regular</option>
+      </select>
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Scheduled At</label>
+      <input type="datetime-local" name="scheduledAt" class="erp-input">
+    </div>
+    <div class="erp-field">
+      <label class="erp-label">Assigned To</label>
+      <select name="assignedTo" class="erp-select">
+        <option value="">Current user</option>
+        {% for u in staff %}<option value="{{ u.id }}">{{ u.firstName }} {{ u.lastName }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="erp-field sm:col-span-2">
+      <label class="erp-label">Feedback / Notes</label>
+      <textarea name="feedback" class="erp-input" rows="2"></textarea>
+    </div>
+  </div>
+  {{ formFooter() }}
+</form>

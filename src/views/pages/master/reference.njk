@@ -1,0 +1,142 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Reference Data Masters') %}
+{% endcall %}
+
+<div x-data="{ tab: 'occupation' }">
+  <div class="flex flex-wrap gap-2 border-b border-surface-border pb-2 mb-6">
+    <button type="button" @click="tab='occupation'" :class="tab==='occupation'?'erp-tab-active':'erp-tab'">Occupations</button>
+    <button type="button" @click="tab='knownby'" :class="tab==='knownby'?'erp-tab-active':'erp-tab'">Known By</button>
+    <button type="button" @click="tab='surgeon'" :class="tab==='surgeon'?'erp-tab-active':'erp-tab'">Surgeons</button>
+    <button type="button" @click="tab='bank'" :class="tab==='bank'?'erp-tab-active':'erp-tab'">Banks</button>
+    <button type="button" @click="tab='company'" :class="tab==='company'?'erp-tab-active':'erp-tab'">Companies</button>
+    <button type="button" @click="tab='therapist'" :class="tab==='therapist'?'erp-tab-active':'erp-tab'">Therapists</button>
+    <button type="button" @click="tab='corporate'" :class="tab==='corporate'?'erp-tab-active':'erp-tab'">Corporate Accounts</button>
+  </div>
+
+  <div x-show="tab==='occupation'" x-cloak class="grid lg:grid-cols-3 gap-6">
+    <div class="erp-card"><div class="erp-card-header"><h3 class="font-semibold text-sm">Add Occupation</h3></div>
+      <form method="POST" action="/master/reference/occupation" class="erp-card-body space-y-3">
+        <div><label class="erp-label">Code</label><input name="code" class="erp-input" required></div>
+        <div><label class="erp-label">Name</label><input name="name" class="erp-input" required></div>
+        <button class="erp-btn-primary w-full text-sm">Add</button>
+      </form>
+    </div>
+    <div class="lg:col-span-2 erp-card erp-table-card">
+      <div class="overflow-x-auto">
+      <table class="erp-table text-sm"><thead><tr><th>Code</th><th>Name</th></tr></thead>
+        <tbody>{% for o in occupations %}<tr><td class="font-mono text-xs">{{ o.code }}</td><td>{{ o.name }}</td></tr>{% endfor %}</tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <div x-show="tab==='knownby'" x-cloak class="grid lg:grid-cols-3 gap-6">
+    <div class="erp-card"><div class="erp-card-header"><h3 class="font-semibold text-sm">Add Known By</h3></div>
+      <form method="POST" action="/master/reference/known-by" class="erp-card-body space-y-3">
+        <div><label class="erp-label">Code</label><input name="code" class="erp-input" required></div>
+        <div><label class="erp-label">Name</label><input name="name" class="erp-input" required></div>
+        <button class="erp-btn-primary w-full text-sm">Add</button>
+      </form>
+    </div>
+    <div class="lg:col-span-2 erp-card erp-table-card">
+      <div class="overflow-x-auto">
+      <table class="erp-table text-sm"><thead><tr><th>Code</th><th>Name</th></tr></thead>
+        <tbody>{% for k in knownByList %}<tr><td class="font-mono text-xs">{{ k.code }}</td><td>{{ k.name }}</td></tr>{% endfor %}</tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <div x-show="tab==='surgeon'" x-cloak class="grid lg:grid-cols-3 gap-6">
+    <div class="erp-card"><div class="erp-card-header"><h3 class="font-semibold text-sm">Add Surgeon</h3></div>
+      <form method="POST" action="/master/reference/surgeon" class="erp-card-body space-y-3">
+        <div><label class="erp-label">Code</label><input name="code" class="erp-input" required></div>
+        <div><label class="erp-label">Name</label><input name="name" class="erp-input" required></div>
+        <div><label class="erp-label">Specialty</label><input name="specialty" class="erp-input"></div>
+        <button class="erp-btn-primary w-full text-sm">Add</button>
+      </form>
+    </div>
+    <div class="lg:col-span-2 erp-card erp-table-card">
+      <div class="overflow-x-auto">
+      <table class="erp-table text-sm"><thead><tr><th>Code</th><th>Name</th><th>Specialty</th></tr></thead>
+        <tbody>{% for s in surgeons %}<tr><td class="font-mono text-xs">{{ s.code }}</td><td>{{ s.name }}</td><td>{{ s.specialty or '—' }}</td></tr>{% endfor %}</tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <div x-show="tab==='bank'" x-cloak class="grid lg:grid-cols-3 gap-6">
+    <div class="erp-card"><div class="erp-card-header"><h3 class="font-semibold text-sm">Add Bank</h3></div>
+      <form method="POST" action="/master/reference/bank" class="erp-card-body space-y-3">
+        <div><label class="erp-label">Code</label><input name="code" class="erp-input" required></div>
+        <div><label class="erp-label">Bank Name</label><input name="name" class="erp-input" required></div>
+        <div><label class="erp-label">Account No</label><input name="accountNumber" class="erp-input font-mono"></div>
+        <div><label class="erp-label">IFSC</label><input name="ifscCode" class="erp-input font-mono"></div>
+        <div><label class="erp-label">Branch</label><input name="branchName" class="erp-input"></div>
+        <button class="erp-btn-primary w-full text-sm">Add</button>
+      </form>
+    </div>
+    <div class="lg:col-span-2 erp-card erp-table-card">
+      <div class="overflow-x-auto">
+      <table class="erp-table text-sm"><thead><tr><th>Code</th><th>Bank</th><th>Account</th><th>IFSC</th></tr></thead>
+        <tbody>{% for b in banks %}<tr><td class="font-mono text-xs">{{ b.code }}</td><td>{{ b.name }}</td><td class="font-mono text-xs">{{ b.accountNumber or '—' }}</td><td class="font-mono text-xs">{{ b.ifscCode or '—' }}</td></tr>{% endfor %}</tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <div x-show="tab==='company'" x-cloak class="grid lg:grid-cols-3 gap-6">
+    <div class="erp-card"><div class="erp-card-header"><h3 class="font-semibold text-sm">Add Company</h3></div>
+      <form method="POST" action="/master/reference/company" class="erp-card-body space-y-3">
+        <div><label class="erp-label">Code</label><input name="code" class="erp-input" required></div>
+        <div><label class="erp-label">Name</label><input name="name" class="erp-input" required></div>
+        <div><label class="erp-label">GSTIN</label><input name="gstin" class="erp-input font-mono"></div>
+        <div><label class="erp-label">Address</label><textarea name="address" class="erp-input" rows="2"></textarea></div>
+        <button class="erp-btn-primary w-full text-sm">Add</button>
+      </form>
+    </div>
+    <div class="lg:col-span-2 erp-card erp-table-card">
+      <div class="overflow-x-auto">
+      <table class="erp-table text-sm"><thead><tr><th>Code</th><th>Company</th><th>GSTIN</th></tr></thead>
+        <tbody>{% for c in companies %}<tr><td class="font-mono text-xs">{{ c.code }}</td><td>{{ c.name }}</td><td class="font-mono text-xs">{{ c.gstin or '—' }}</td></tr>{% endfor %}</tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <div x-show="tab==='therapist'" x-cloak class="grid lg:grid-cols-3 gap-6">
+    <div class="erp-card"><div class="erp-card-header"><h3 class="font-semibold text-sm">Add Therapist</h3></div>
+      <form method="POST" action="/master/reference/therapist" class="erp-card-body space-y-3">
+        <div><label class="erp-label">Code</label><input name="code" class="erp-input" required></div>
+        <div><label class="erp-label">Name</label><input name="name" class="erp-input" required></div>
+        <div><label class="erp-label">Specialty</label><input name="specialty" class="erp-input"></div>
+        <div><label class="erp-label">Branch</label><select name="branchId" class="erp-select"><option value="">—</option>{% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select></div>
+        <button class="erp-btn-primary w-full text-sm">Add</button>
+      </form>
+    </div>
+    <div class="lg:col-span-2 erp-card erp-table-card">
+      <div class="overflow-x-auto">
+      <table class="erp-table text-sm"><thead><tr><th>Code</th><th>Name</th><th>Specialty</th></tr></thead>
+        <tbody>{% for t in therapists %}<tr><td class="font-mono text-xs">{{ t.code }}</td><td>{{ t.name }}</td><td>{{ t.specialty or '—' }}</td></tr>{% endfor %}</tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <div x-show="tab==='corporate'" x-cloak class="grid lg:grid-cols-3 gap-6">
+    <div class="erp-card"><div class="erp-card-header"><h3 class="font-semibold text-sm">Corporate B2B Account</h3></div>
+      <form method="POST" action="/master/reference/corporate-customer" class="erp-card-body space-y-3">
+        <div><label class="erp-label">Company Name *</label><input name="companyName" class="erp-input" required></div>
+        <div><label class="erp-label">GSTIN</label><input name="gstin" class="erp-input font-mono"></div>
+        <div><label class="erp-label">Phone *</label><input name="phone" class="erp-input" required></div>
+        <div><label class="erp-label">Email</label><input type="email" name="email" class="erp-input"></div>
+        <div><label class="erp-label">Branch</label><select name="branchId" class="erp-select">{% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select></div>
+        <button class="erp-btn-primary w-full text-sm">Create Account</button>
+      </form>
+    </div>
+    <div class="lg:col-span-2 erp-card"><div class="erp-card-body text-sm text-slate-500">Corporate accounts appear in Pharmacy B2B invoicing. Use the form to register hospitals, pharmacies, and institutional buyers.</div></div>
+  </div>
+</div>
+{% endblock %}

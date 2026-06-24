@@ -1,0 +1,107 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Stock Outward') %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">New Outward Entry</h3></div>
+    <form method="POST" action="/inventory/stock-outward" id="outward-form" class="erp-card-body space-y-4">
+      <div>
+        <label class="erp-label">Branch *</label>
+        <select name="branchId" class="erp-select" required>
+          {% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Stock Type</label>
+        <select name="stockType" class="erp-select">
+          <option value="BILLABLE">Billable</option>
+          <option value="CLINICAL">Clinical</option>
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Destination</label>
+        <input type="text" name="destination" class="erp-input" placeholder="Customer / branch / disposal">
+      </div>
+      <div>
+        <label class="erp-label">Notes</label>
+        <textarea name="notes" class="erp-input" rows="2"></textarea>
+      </div>
+      <div class="border-t border-surface-border pt-4">
+        <div class="flex gap-2 mb-3">
+          <select id="product-select" class="erp-select flex-1 text-sm">
+            {% for p in products %}<option value="{{ p.id }}">{{ p.name }} ({{ p.sku }})</option>{% endfor %}
+          </select>
+          <input type="number" id="item-qty" class="erp-input w-20 text-sm" value="1" min="1">
+          <button type="button" onclick="addOutwardItem()" class="erp-btn-secondary text-sm">Add</button>
+        </div>
+      <div class="overflow-x-auto">
+        <table class="erp-table text-sm">
+          <thead><tr><th>Product</th><th>Qty</th><th></th></tr></thead>
+          <tbody id="outward-items-body"><tr><td colspan="3" class="text-center text-slate-400 py-2 text-xs">Add products</td></tr></tbody>
+        </table>
+        <input type="hidden" name="items" id="outward-items-json" value="[]">
+      </div>
+      <button type="submit" class="erp-btn-primary w-full">Create Outward</button>
+    </form>
+  </div>
+
+  <div class="lg:col-span-2 erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Outward Register</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+      <thead><tr><th>Outward No</th><th>Branch</th><th>Type</th><th>Destination</th><th>Items</th><th>Status</th><th>Date</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for o in outwards %}
+        <tr>
+          <td class="font-mono text-xs font-medium">{{ o.outwardNo }}</td>
+          <td>{{ o.branch.name }}</td>
+          <td><span class="erp-badge-neutral">{{ o.stockType }}</span></td>
+          <td class="text-sm">{{ o.destination or '—' }}</td>
+          <td>
+            <ul class="text-xs space-y-0.5">
+              {% for item in o.items %}<li>{{ item.product.name }} × {{ item.quantity }}</li>{% endfor %}
+            </ul>
+          </td>
+          <td>{{ statusBadge(o.status) }}</td>
+          <td class="text-xs text-slate-500">{{ o.createdAt | date }}</td>
+          <td>
+            {% if o.status == 'PENDING' %}
+            <form method="POST" action="/inventory/stock-outward/{{ o.id }}/authorize" class="inline">
+              <button type="submit" class="erp-btn-primary text-xs py-1" onclick="return confirm('Authorize and deduct stock?')">Authorize</button>
+            </form>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="erp-empty-cell">No outward entries</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const outwardItems = [];
+const productNames = { {% for p in products %}"{{ p.id }}": "{{ p.name }}",{% endfor %} };
+function addOutwardItem() {
+  outwardItems.push({ productId: document.getElementById('product-select').value, quantity: parseInt(document.getElementById('item-qty').value, 10) || 1 });
+  renderOutwardItems();
+}
+function removeOutwardItem(i) { outwardItems.splice(i, 1); renderOutwardItems(); }
+function renderOutwardItems() {
+  const tbody = document.getElementById('outward-items-body');
+  if (!outwardItems.length) {
+    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-slate-400 py-2 text-xs">Add products</td></tr>';
+  } else {
+    tbody.innerHTML = outwardItems.map((item, i) => `<tr><td>${productNames[item.productId]}</td><td>${item.quantity}</td><td><button type="button" onclick="removeOutwardItem(${i})" class="text-red-500 text-xs">Remove</button></td></tr>`).join('');
+  }
+  document.getElementById('outward-items-json').value = JSON.stringify(outwardItems);
+}
+</script>
+{% endblock %}

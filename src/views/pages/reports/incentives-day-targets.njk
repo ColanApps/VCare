@@ -1,0 +1,32 @@
+{% extends "layouts/main.njk" %}
+{% from "partials/report-filters.njk" import reportPeriodFilter %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Day Target Achievement') %}
+{% endcall %}
+{{ reportPeriodFilter('/reports/incentives/day-targets', period) }}
+<p class="text-sm text-slate-500 mb-6">Daily sales vs prorated monthly branch target</p>
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+  <table class="erp-table text-sm">
+    <thead><tr><th>Date</th><th>Branch</th><th>Day Target</th><th>Achieved</th><th>%</th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+      {% if row.achieved > 0 or row.dayTarget > 0 %}
+      <tr class="{% if row.achievement >= 100 %}bg-emerald-50{% elif row.achievement >= 80 %}bg-amber-50{% endif %}">
+        <td class="whitespace-nowrap">{{ row.date | date }}</td>
+        <td>{{ row.branch.name }}</td>
+        <td>{{ row.dayTarget | currency }}</td>
+        <td class="font-medium">{{ row.achieved | currency }}</td>
+        <td>{{ row.achievement | round(0) }}%</td>
+      </tr>
+      {% endif %}
+      {% else %}
+      <tr><td colspan="5" class="erp-empty-cell">No data</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

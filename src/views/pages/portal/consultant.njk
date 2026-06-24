@@ -1,0 +1,63 @@
+{% extends "layouts/portal.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar, hubTile %}
+{% block content %}
+{% call pageToolbar('Consultant Dashboard', consultant.firstName ~ ' ' ~ consultant.lastName ~ ' · ' ~ period.start | date ~ ' – ' ~ period.end | date) %}
+{% endcall %}
+
+<div class="erp-kpi-grid">
+  <div class="erp-kpi"><div class="erp-kpi-label">Revenue</div><div class="erp-kpi-value mt-1">{{ revenue | currency }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Target</div><div class="erp-kpi-value mt-1">{{ target | currency }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Achievement</div><div class="erp-kpi-value mt-1">{% if target > 0 %}{{ ((revenue / target) * 100) | round(1) }}%{% else %}—{% endif %}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Pending Follow-ups</div><div class="erp-kpi-value mt-1">{{ pendingFollowUps }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Bills</div><div class="erp-kpi-value mt-1">{{ billCount }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Appointments</div><div class="erp-kpi-value mt-1">{{ appointmentCount }}</div></div>
+  <div class="erp-kpi"><div class="erp-kpi-label">Consultations</div><div class="erp-kpi-value mt-1">{{ consultationCount }}</div></div>
+</div>
+
+<h2 class="erp-section-title">Workflows</h2>
+<div class="erp-hub-grid mb-8">
+  {{ hubTile('/appointments', 'Appointments', 'View schedule and manage today\'s bookings') }}
+  {% set followUpBadge = (pendingFollowUps ~ ' pending') if pendingFollowUps else '' %}
+  {{ hubTile('/appointments/follow-ups', 'Follow-ups', 'Pending follow-up tasks and callbacks', followUpBadge) }}
+  {{ hubTile('/customer/search', 'Clinical Workflow', 'Find customer → consultation → procedure → billing') }}
+  {{ hubTile('/customer/treatment/visits', 'Record Visit', 'Log treatment session details') }}
+  {{ hubTile('/reports/consultants/' ~ consultant.id, 'Performance Report', 'Detailed monthly analytics and targets') }}
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Today's Appointments</h3></div>
+    <div class="overflow-x-auto">
+      <table class="erp-table text-sm">
+        <thead><tr><th>Customer</th><th>Time</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for a in todayAppointments %}
+          <tr>
+            <td class="font-medium">{{ a.customer.firstName }} {{ a.customer.lastName }}</td>
+            <td class="text-slate-500">{{ a.scheduledAt | datetime }}</td>
+            <td>{{ statusBadge(a.status) }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="erp-empty-cell">No appointments today</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="erp-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Treatment Breakdown</h3></div>
+    <div class="erp-card-body space-y-2">
+      {% for t in treatmentBreakdown %}
+      <div class="flex justify-between text-sm">
+        <span>{{ t.name }}</span>
+        <span class="font-medium">{{ t.amount | currency }}</span>
+      </div>
+      {% else %}
+      <div class="text-center text-slate-400 py-4">No bill data this month</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

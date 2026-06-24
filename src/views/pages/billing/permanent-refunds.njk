@@ -1,0 +1,69 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Permanent Refunds') %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Request Permanent Refund</h3></div>
+    <form method="POST" action="/billing/permanent-refunds" enctype="multipart/form-data" class="erp-card-body space-y-4">
+      <div>
+        <label class="erp-label">Customer *</label>
+        <select name="customerId" class="erp-select" required>
+          <option value="">Select customer</option>
+          {% for c in customers %}<option value="{{ c.id }}">{{ c.firstName }} {{ c.lastName }} ({{ c.uhid }})</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="erp-label">Linked Bill ID (optional)</label>
+        <input type="text" name="billId" class="erp-input font-mono text-sm" placeholder="Bill cuid">
+      </div>
+      <div>
+        <label class="erp-label">Amount (₹) *</label>
+        <input type="number" name="amount" class="erp-input" step="0.01" min="1" required>
+      </div>
+      <div>
+        <label class="erp-label">Reason *</label>
+        <textarea name="reason" class="erp-input" rows="3" required></textarea>
+      </div>
+      <div>
+        <label class="erp-label">Supporting document</label>
+        <input type="file" name="attachment" class="erp-input text-sm" accept="image/*,.pdf">
+      </div>
+      <button type="submit" class="erp-btn-primary w-full">Submit Request</button>
+    </form>
+  </div>
+
+  <div class="lg:col-span-2 erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Refund Requests</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+      <thead><tr><th>Refund No</th><th>Customer</th><th>Amount</th><th>Reason</th><th>File</th><th>Status</th><th>Date</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for r in refunds %}
+        <tr>
+          <td class="font-mono text-xs">{{ r.refundNo }}</td>
+          <td>{{ r.customer.firstName }} {{ r.customer.lastName }}</td>
+          <td class="font-medium">{{ r.amount | currency }}</td>
+          <td class="text-sm max-w-xs truncate">{{ r.reason }}</td>
+          <td class="text-xs">{% if r.attachmentPath %}<a href="{{ r.attachmentPath }}" class="text-accent-600" target="_blank">View</a>{% else %}—{% endif %}</td>
+          <td>{{ statusBadge(r.status) }}</td>
+          <td class="text-xs text-slate-500">{{ r.createdAt | date }}</td>
+          <td>
+            {% if r.status == 'PENDING' %}
+            <form method="POST" action="/billing/permanent-refunds/{{ r.id }}/approve" class="inline">
+              <button type="submit" class="erp-btn-secondary text-xs py-1" onclick="return confirm('Approve this refund?')">Approve</button>
+            </form>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="erp-empty-cell">No permanent refund requests</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

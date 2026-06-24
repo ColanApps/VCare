@@ -1,0 +1,51 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('GRN Pending') %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Awaiting Quality Check</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table">
+      <thead><tr><th>GRN</th><th>PO</th><th>Vendor</th><th>Items</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for g in pendingGrns %}
+        <tr>
+          <td class="font-mono text-xs">{{ g.grnNo }}</td>
+          <td class="font-mono text-xs">{{ g.po.poNo }}</td>
+          <td>{{ g.po.vendor.name }}</td>
+          <td class="text-xs">{{ g.items | length }} lines</td>
+          <td><a href="/purchase/grn/{{ g.id }}/quality" class="erp-btn-secondary text-xs py-1">Quality Check</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="erp-empty-cell">No GRNs pending quality</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+      </div></div>
+
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">PO — Pending Products</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table text-sm">
+      <thead><tr><th>PO</th><th>Product</th><th>Ordered</th><th>Received</th><th>Pending</th></tr></thead>
+      <tbody>
+        {% for row in pendingProducts %}
+        <tr>
+          <td class="font-mono text-xs">{{ row.po.poNo }}</td>
+          <td>{{ row.product.name }}</td>
+          <td>{{ row.ordered }}</td>
+          <td>{{ row.received }}</td>
+          <td class="font-medium text-amber-600">{{ row.pending }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="erp-empty-cell">All PO lines received</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

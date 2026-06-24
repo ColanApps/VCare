@@ -1,0 +1,37 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar, modalTrigger %}
+{% block content %}
+{% call pageToolbar(title, 'Center purchase orders for aesthetics') %}
+  {{ modalTrigger('Create PO', '/purchase/aesthetics/orders/form', 'New Aesthetics PO', 'xl') }}
+  <a href="/purchase/aesthetics/orders/authorize" class="erp-btn-secondary">Authorize</a>
+  <a href="/purchase/aesthetics/grn" class="erp-btn-secondary">GRN</a>
+{% endcall %}
+
+<form method="GET" class="erp-filter-bar">
+  <div class="erp-field flex-1"><label class="erp-label">Search</label><input type="text" name="q" value="{{ filters.q or '' }}" class="erp-input" placeholder="PO no, vendor…"></div>
+  <button type="submit" class="erp-btn-secondary">Search</button>
+</form>
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+    <thead><tr><th>PO No</th><th>Center</th><th>Vendor</th><th>Amount</th><th>Status</th><th>Expected</th></tr></thead>
+    <tbody>
+      {% for po in orders %}
+      <tr>
+        <td class="font-mono text-xs font-medium">{{ po.poNo }}</td>
+        <td>{{ po.branch.name if po.branch else '—' }}</td>
+        <td>{{ po.vendor.name }}</td>
+        <td class="tabular-nums">{{ po.totalAmount | currency }}</td>
+        <td>{{ statusBadge(po.status) }}</td>
+        <td class="text-xs">{{ po.expectedDate | date if po.expectedDate else '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="erp-empty-cell">No aesthetics POs</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

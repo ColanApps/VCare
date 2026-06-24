@@ -1,0 +1,48 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Pending Session Follow-Up') %}
+{% endcall %}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="erp-card erp-table-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Recent Treatment Visits</h3></div>
+      <div class="overflow-x-auto">
+        <table class="erp-table text-sm">
+      <thead><tr><th>Visit</th><th>Customer</th><th>Session</th><th>Date</th></tr></thead>
+      <tbody>
+        {% for v in visits %}
+        <tr>
+          <td class="font-mono text-xs">{{ v.visitNo }}</td>
+          <td>{{ v.customer.firstName }} {{ v.customer.lastName }}</td>
+          <td>{{ v.sessionNo }}</td>
+          <td class="text-xs">{{ v.visitedAt | date }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="erp-empty-cell">No visits</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+      </div></div>
+
+  <div class="erp-card">
+    <div class="erp-card-header"><h3 class="font-semibold">Pending Treatment Follow-Ups</h3></div>
+    <div class="divide-y divide-surface-border">
+      {% for f in followUps %}
+      <div class="p-4 flex justify-between items-start">
+        <div>
+          <div class="font-medium">{{ f.customer.firstName }} {{ f.customer.lastName }}</div>
+          <div class="text-xs text-slate-500">{{ f.scheduledAt | datetime if f.scheduledAt else 'No date' }}</div>
+        </div>
+        <form method="POST" action="/call-center/follow-ups/{{ f.id }}/complete">
+          <button type="submit" class="erp-btn-secondary text-xs py-1">Complete</button>
+        </form>
+      </div>
+      {% else %}
+      <div class="p-6 text-center text-slate-400">No pending session follow-ups</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

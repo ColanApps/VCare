@@ -1,0 +1,36 @@
+{% extends "layouts/main.njk" %}
+{% from "partials/report-filters.njk" import reportPeriodFilter %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Branch Manager Incentives') %}
+{% endcall %}
+{{ reportPeriodFilter('/reports/incentives/branch-managers', period) }}
+
+<div class="erp-kpi mb-6 inline-block">
+  <div class="erp-kpi-label">Total BM Incentive</div>
+  <div class="erp-kpi-value mt-1">{{ totalIncentive | currency }}</div>
+</div>
+<p class="text-xs text-slate-500 mb-4">1% of branch revenue when monthly target is achieved</p>
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+    <thead><tr><th>Branch</th><th>Manager</th><th>Revenue</th><th>Target</th><th>Achievement</th><th>Incentive</th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td class="font-medium">{{ row.branch.name }}</td>
+        <td>{% if row.manager %}{{ row.manager.firstName }} {{ row.manager.lastName }}{% else %}—{% endif %}</td>
+        <td>{{ row.revenue | currency }}</td>
+        <td>{{ row.target | currency }}</td>
+        <td>{{ row.achievement | round(1) }}%</td>
+        <td class="font-semibold text-emerald-600">{{ row.incentive | currency }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="erp-empty-cell">No data</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

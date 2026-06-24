@@ -1,0 +1,36 @@
+{% extends "layouts/main.njk" %}
+{% from "partials/report-filters.njk" import reportPeriodFilter %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Refund & Credit Note Report') %}
+{% endcall %}
+{{ reportPeriodFilter('/reports/refunds', period) }}
+<p class="text-sm text-slate-500 mb-6">{{ period.from | date }} — {{ period.to | date }}</p>
+
+<div class="erp-kpi mb-6 inline-block">
+  <div class="erp-kpi-label">Total Credits</div>
+  <div class="erp-kpi-value mt-1">{{ total | currency }}</div>
+</div>
+
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+    <thead><tr><th>Credit Note</th><th>Bill</th><th>Customer</th><th>Branch</th><th>Amount</th><th>Date</th></tr></thead>
+    <tbody>
+      {% for cn in creditNotes %}
+      <tr>
+        <td class="font-mono text-xs">{{ cn.creditNoteNo }}</td>
+        <td class="font-mono text-xs"><a href="/billing/{{ cn.bill.id }}" class="text-accent-600">{{ cn.bill.billNo }}</a></td>
+        <td>{{ cn.bill.customer.firstName }} {{ cn.bill.customer.lastName }}</td>
+        <td>{{ cn.bill.branch.name }}</td>
+        <td class="font-medium text-red-600">{{ cn.amount | currency }}</td>
+        <td class="text-xs">{{ cn.createdAt | date }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="erp-empty-cell">No credit notes in period</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

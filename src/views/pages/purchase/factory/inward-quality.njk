@@ -1,0 +1,28 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/components.njk" import statusBadge %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Factory Inward — Quality Check Queue') %}
+{% endcall %}
+<div class="erp-card erp-table-card">
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+    <thead><tr><th>GRN No</th><th>Indent</th><th>Vendor</th><th>Items</th><th>Date</th><th></th></tr></thead>
+    <tbody>
+      {% for g in inwards %}
+      <tr>
+        <td class="font-mono text-xs">{{ g.grnNo }}</td>
+        <td>{{ g.factoryIndent.indentNo if g.factoryIndent else '—' }}</td>
+        <td>{{ g.po.vendor.name if g.po else '—' }}</td>
+        <td>{{ g.items | length }}</td>
+        <td class="text-xs">{{ g.createdAt | date }}</td>
+        <td><a href="/purchase/factory/inward/{{ g.id }}/quality" class="erp-btn-primary text-xs py-1 px-2">Start QC</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="erp-empty-cell">No inwards pending QC</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

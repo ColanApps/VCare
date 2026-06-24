@@ -1,0 +1,115 @@
+{% extends "layouts/main.njk" %}
+{% from "macros/ui.njk" import pageToolbar %}
+{% block content %}
+{% call pageToolbar('Organisation Organogram') %}
+{% endcall %}
+
+<div class="erp-card mb-6">
+  <div class="erp-card-header"><h3 class="font-semibold text-slate-900">Add Position</h3></div>
+  <form method="POST" action="/admin/organogram" class="erp-card-body">
+    <div class="erp-form-grid">
+      <div><label class="erp-label">Title</label><input type="text" name="title" class="erp-input" required></div>
+      <div><label class="erp-label">Designation</label><input type="text" name="designation" class="erp-input" required></div>
+      <div><label class="erp-label">Department</label><input type="text" name="department" class="erp-input"></div>
+      <div><label class="erp-label">Reports To</label>
+        <select name="parentId" class="erp-select"><option value="">— Root —</option>{% for n in flatNodes %}<option value="{{ n.id }}">{{ n.title }}</option>{% endfor %}</select>
+      </div>
+      <div><label class="erp-label">Assign User</label>
+        <select name="userId" class="erp-select"><option value="">Vacant</option>{% for u in users %}<option value="{{ u.id }}">{{ u.firstName }} {{ u.lastName }}</option>{% endfor %}</select>
+      </div>
+      <div><label class="erp-label">Sort Order</label><input type="number" name="sortOrder" class="erp-input" value="0"></div>
+    </div>
+    <button type="submit" class="erp-btn-primary mt-4">Add Node</button>
+  </form>
+</div>
+
+<div class="erp-card mb-6">
+  <div class="erp-card-header">
+    <h3 class="font-semibold text-slate-900">Hierarchy Tree</h3>
+    <span class="text-xs text-slate-500">{{ flatNodes | length }} positions</span>
+  </div>
+  <div class="erp-card-body overflow-x-auto">
+    <div class="org-tree min-w-max py-4">
+      {% macro renderNode(node, depth=0) %}
+      <div class="org-tree-node" style="margin-left: {{ depth * 2 }}rem">
+        <div class="inline-flex items-start gap-3 p-4 bg-white border border-surface-border rounded-xl shadow-sm min-w-[220px] mb-3">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-accent-400 to-erp-600 flex items-center justify-center text-white text-sm font-semibold shrink-0">
+            {% if node.user %}{{ node.user.firstName[0] }}{{ node.user.lastName[0] }}{% else %}{{ node.title[0] }}{% endif %}
+          </div>
+          <div>
+            <div class="font-semibold text-slate-900 text-sm">{{ node.title }}</div>
+            <div class="text-xs text-slate-500">{{ node.designation }}</div>
+            {% if node.department %}<div class="text-[10px] text-slate-400 mt-0.5">{{ node.department }}</div>{% endif %}
+            {% if node.user %}
+            <div class="text-xs text-accent-600 mt-1">{{ node.user.firstName }} {{ node.user.lastName }}</div>
+            {% if node.user.branch %}<div class="text-[10px] text-slate-400">{{ node.user.branch.name }}</div>{% endif %}
+            {% endif %}
+          </div>
+        </div>
+        {% if node.children | length > 0 %}
+        <div class="org-tree-children border-l-2 border-accent-200 ml-5 pl-4">
+          {% for child in node.children %}
+          {{ renderNode(child, depth + 1) }}
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% endmacro %}
+
+      {% for root in orgTree %}
+      {{ renderNode(root) }}
+      {% else %}
+      <p class="erp-empty-cell">No organisation structure defined</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="erp-card erp-table-card">
+  <div class="erp-card-header">
+    <h3 class="font-semibold text-slate-900">All Positions</h3>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Designation</th>
+          <th>Department</th>
+          <th>Assigned User</th>
+          <th>Reports To</th>
+          <th>Edit</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for node in flatNodes %}
+        <tr>
+          <td class="font-medium">{{ node.title }}</td>
+          <td>{{ node.designation }}</td>
+          <td>{{ node.department or '—' }}</td>
+          <td>{% if node.user %}{{ node.user.firstName }} {{ node.user.lastName }}{% else %}<span class="text-slate-400">Vacant</span>{% endif %}</td>
+          <td>
+            {% if node.parentId %}
+            {% for p in flatNodes %}{% if p.id == node.parentId %}{{ p.title }}{% endif %}{% endfor %}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            <details class="text-xs">
+              <summary class="text-accent-600 cursor-pointer">Edit</summary>
+              <form method="POST" action="/admin/organogram/{{ node.id }}" class="mt-2 space-y-1 p-2 bg-slate-50 rounded">
+                <input type="text" name="title" value="{{ node.title }}" class="erp-input text-xs" required>
+                <input type="text" name="designation" value="{{ node.designation }}" class="erp-input text-xs" required>
+                <input type="text" name="department" value="{{ node.department or '' }}" class="erp-input text-xs" placeholder="Department">
+                <select name="parentId" class="erp-select text-xs"><option value="">Root</option>{% for n in flatNodes %}{% if n.id != node.id %}<option value="{{ n.id }}" {% if n.id == node.parentId %}selected{% endif %}>{{ n.title }}</option>{% endif %}{% endfor %}</select>
+                <select name="userId" class="erp-select text-xs"><option value="">Vacant</option>{% for u in users %}<option value="{{ u.id }}" {% if node.userId == u.id %}selected{% endif %}>{{ u.firstName }} {{ u.lastName }}</option>{% endfor %}</select>
+                <button type="submit" class="erp-btn-secondary text-xs w-full">Save</button>
+              </form>
+            </details>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}
