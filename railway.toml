@@ -1,8 +1,8 @@
 # Railway — https://docs.railway.com/reference/config-as-code
 #
 # 1. Add a MySQL database in the same project.
-# 2. On the web service, set:  DATABASE_URL = ${{MySQL.MYSQL_URL}}
-#    (Variables → Add reference → pick your MySQL service → MYSQL_URL)
+# 2. Link MySQL to the web service (Railway injects MYSQL_URL; app maps it to DATABASE_URL).
+#    Optional: DATABASE_URL = ${{MySQL.MYSQL_URL}}
 # 3. Set SESSION_SECRET to a long random string.
 # 4. First deploy only: run  node prisma/seed.js  once (Railway shell).
 

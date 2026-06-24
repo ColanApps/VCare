@@ -24,8 +24,8 @@ Open http://localhost:3000 — demo login: `admin@vcare.com` / `VCare@123`
 
 1. **New Project** → deploy from GitHub → `ColanApps/VCare`.
 2. **Add MySQL** in the same project (Database → MySQL).
-3. On the **web service** → **Variables**:
-   - `DATABASE_URL` = **`${{MySQL.MYSQL_URL}}`** (use *Add reference* → your MySQL service → `MYSQL_URL`)
+3. On the **web service** → link the MySQL service (Railway injects `MYSQL_URL`).
+   Optional: `DATABASE_URL` = **`${{MySQL.MYSQL_URL}}`** — the app auto-uses `MYSQL_URL` if `DATABASE_URL` is unset.
    - `SESSION_SECRET` = long random string
    - `NODE_ENV` = `production`
    - `SESSION_STORE` = `mysql`

@@ -1,3 +1,5 @@
+import 'dotenv/config';
+import '../src/lib/ensureDatabaseUrl.js';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
