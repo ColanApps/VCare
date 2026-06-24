@@ -7,7 +7,7 @@ services:
     runtime: node
     plan: starter
     buildCommand: npm install && npm run build
-    releaseCommand: npm run db:push && npm run db:sync-permissions
+    releaseCommand: npm run db:push && npm run db:seed && npm run db:sync-permissions
     startCommand: npm start
     healthCheckPath: /auth/login
     envVars:

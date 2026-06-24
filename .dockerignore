@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+uploads
+prisma/dev.db
+prisma/dev.db-journal
+prisma/sessions.db
+*.log
+.DS_Store
+docs
+Clinic Process ERP Migration.docx
