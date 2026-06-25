@@ -29,6 +29,9 @@ printf 'DATABASE_URL=%s\n' "$DATABASE_URL" > .env
 echo "Applying database schema..."
 npx prisma db push
 
+echo "Seeding demo users and base data..."
+node prisma/seed.js
+
 echo "Syncing RBAC permissions..."
 node prisma/sync-permissions.js
 
