@@ -16,6 +16,8 @@ services:
         value: production
       - key: SESSION_STORE
         value: mysql
+      - key: IP_WHITELIST_ENFORCE
+        value: "false"
       - key: DATABASE_URL
         sync: false
       - key: SESSION_SECRET

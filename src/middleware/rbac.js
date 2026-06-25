@@ -22,6 +22,7 @@ export function requirePermission(...permissions) {
 
 export async function checkIpWhitelist(req, res, next) {
   if (process.env.NODE_ENV === 'development') return next();
+  if (process.env.IP_WHITELIST_ENFORCE === 'false') return next();
 
   const ip = req.ip?.replace('::ffff:', '') || req.connection.remoteAddress;
   const whitelist = await prisma.ipWhitelist.findMany({ where: { isActive: true } });

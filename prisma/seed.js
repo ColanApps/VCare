@@ -559,8 +559,15 @@ async function main() {
     });
   }
 
-  for (const ip of [{ ipAddress: '127.0.0.1', description: 'Localhost' }, { ipAddress: '::1', description: 'IPv6 Localhost' }]) {
-    await prisma.ipWhitelist.upsert({ where: { ipAddress: ip.ipAddress }, create: ip, update: {} });
+  // Local dev only — production allows all IPs until an admin configures the whitelist.
+  if (process.env.NODE_ENV !== 'production') {
+    for (const ip of [{ ipAddress: '127.0.0.1', description: 'Localhost' }, { ipAddress: '::1', description: 'IPv6 Localhost' }]) {
+      await prisma.ipWhitelist.upsert({ where: { ipAddress: ip.ipAddress }, create: ip, update: {} });
+    }
+  } else {
+    await prisma.ipWhitelist.deleteMany({
+      where: { ipAddress: { in: ['127.0.0.1', '::1'] } },
+    });
   }
 
   // Phase 8 — registry master sample data
