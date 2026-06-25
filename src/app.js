@@ -37,6 +37,7 @@ import screensRoutes from './routes/screens.js';
 import financeRoutes from './routes/finance.js';
 import clinicalRoutes from './routes/clinical.js';
 import apiRoutes from './routes/api.js';
+import { enterpriseModules } from './config/enterpriseModules.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -50,6 +51,11 @@ app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/favicon.ico', (req, res) => {
+  res.type('image/svg+xml');
+  res.sendFile(path.join(__dirname, 'public/img/favicon.svg'));
+});
 
 app.use(
   session({
@@ -102,6 +108,17 @@ app.use('/auth', authRoutes);
 app.use('/api/v1', apiRoutes);
 
 app.use(requireAuth);
+
+app.get('/home', (req, res) => {
+  const activeCount = enterpriseModules.filter((m) => m.active).length;
+  res.render('pages/home/enterprise-portal.njk', {
+    title: 'Enterprise Portal',
+    layout: 'layouts/enterprise-portal.njk',
+    modules: enterpriseModules,
+    activeCount,
+  });
+});
+
 app.use(shellContext);
 app.use(purchaseWorkflowRoutes);
 app.use(registryWorkflowRoutes);
@@ -124,7 +141,7 @@ app.use('/customer/treatment', treatmentRoutes);
 app.use('/sales', salesRoutes);
 app.use('/reports', reportsRoutes);
 
-app.get('/', (req, res) => res.redirect('/dashboard/my-tasks'));
+app.get('/', (req, res) => res.redirect('/home'));
 
 app.use((req, res) => {
   res.status(404).render('pages/error.njk', {

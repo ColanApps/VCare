@@ -7,12 +7,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/css/app.css">
   <script defer src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js"></script>
 </head>
 <body class="h-full antialiased" x-data="{ showPassword: false }">
   <div class="erp-auth-page">
-    <aside class="erp-auth-visual erp-auth-visual--gradient" aria-hidden="true">
+    <aside class="erp-auth-visual" aria-hidden="true">
+      <img src="/img/login-hero.png" alt="" class="erp-auth-visual-img" width="1200" height="800" loading="eager" decoding="async">
       <div class="erp-auth-visual-overlay"></div>
       <div class="erp-auth-visual-content">
         <p class="erp-auth-visual-eyebrow">Enterprise clinic platform</p>
@@ -28,7 +30,8 @@
 
     <main class="erp-auth-panel">
       <div class="erp-auth-panel-inner">
-        <div class="erp-auth-mobile-hero erp-auth-visual--gradient">
+        <div class="erp-auth-mobile-hero">
+          <img src="/img/login-hero.png" alt="" class="absolute inset-0 w-full h-full object-cover" loading="eager" decoding="async">
           <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-slate-900/20"></div>
         </div>
 

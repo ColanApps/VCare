@@ -11,7 +11,7 @@ export function requireAuth(req, res, next) {
 
 export function requireGuest(req, res, next) {
   if (req.session?.user) {
-    return res.redirect('/dashboard');
+    return res.redirect('/home');
   }
   next();
 }

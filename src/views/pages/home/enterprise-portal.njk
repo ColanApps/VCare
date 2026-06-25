@@ -1,0 +1,40 @@
+{% extends "layouts/enterprise-portal.njk" %}
+
+{% block content %}
+<section class="ep-hero">
+  <div class="ep-hero-bg" aria-hidden="true"></div>
+  <div class="ep-hero-overlay" aria-hidden="true"></div>
+  <div class="ep-hero-inner">
+    <span class="ep-hero-badge">Enterprise Portal</span>
+    <h1 class="ep-hero-title">Welcome back, {{ user.firstName }}</h1>
+    <p class="ep-hero-sub">Choose a module to open its workspace — VCare Portal, Finance, HRMS, Compliance, and more.</p>
+  </div>
+</section>
+
+<section class="ep-modules">
+  <div class="ep-modules-head">
+    <div>
+      <h2 class="ep-modules-title">Your modules</h2>
+      <p class="ep-modules-sub">Integrated apps across the organisation</p>
+    </div>
+    <div class="ep-modules-count">{{ activeCount }} ACTIVE · {{ modules | length }} TOTAL</div>
+  </div>
+
+  <div class="ep-modules-grid">
+    {% for mod in modules %}
+    <article class="ep-tile {% if not mod.active %}ep-tile--disabled{% endif %}">
+      <div class="ep-tile-icon ep-tile-icon--{{ mod.icon }}">
+        {% include "partials/enterprise-module-icon.njk" %}
+      </div>
+      <h3 class="ep-tile-title">{{ mod.title }}</h3>
+      <p class="ep-tile-desc">{{ mod.description }}</p>
+      {% if mod.active %}
+      <a href="{{ mod.href }}" class="ep-tile-btn ep-tile-btn--active">Open workspace</a>
+      {% else %}
+      <span class="ep-tile-btn ep-tile-btn--soon">Coming soon</span>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

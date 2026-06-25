@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }} · {{ appName }}</title>
+  <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/app.css">
+  <script defer src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js"></script>
+</head>
+<body class="h-full ep-body" x-data="enterprisePortalClock()" x-init="start()">
+  <header class="ep-header">
+    <div class="ep-header-inner">
+      <div class="ep-header-left">
+        <div class="ep-avatar" aria-hidden="true">{{ user.firstName[0] }}{{ user.lastName[0] }}</div>
+        <div>
+          <div class="ep-user-name">{{ user.firstName }} {{ user.lastName }} · {{ user.roleName or user.roleCode }}</div>
+          <div class="ep-user-role">{{ user.roleName or user.roleCode }}</div>
+        </div>
+      </div>
+
+      <div class="ep-header-meta hidden md:flex">
+        <span x-text="dateLabel"></span>
+        <span class="ep-meta-sep">·</span>
+        <span x-text="timeLabel" class="tabular-nums"></span>
+        <span class="ep-meta-sep">·</span>
+        <span>{{ isDev and 'Development' or 'Production' }}</span>
+      </div>
+
+      <div class="ep-header-search hidden lg:block">
+        <svg class="ep-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input type="search" class="ep-search-input" placeholder="Search records, modules, pages…" disabled aria-label="Search (coming soon)">
+      </div>
+
+      <div class="ep-header-right">
+        <button type="button" class="ep-notify-btn" aria-label="Notifications" disabled>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+          <span class="ep-notify-badge">0</span>
+        </button>
+        <form method="POST" action="/auth/logout" class="inline">
+          <button type="submit" class="ep-logout-btn">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Logout
+          </button>
+        </form>
+        <div class="ep-brand-lockup">
+          <div class="ep-brand-mark">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+          </div>
+          <span class="ep-brand-text">{{ appName }}</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
+  <script>
+  function enterprisePortalClock() {
+    return {
+      dateLabel: '',
+      timeLabel: '',
+      start() {
+        const tick = () => {
+          const now = new Date();
+          this.dateLabel = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+          this.timeLabel = now.toLocaleTimeString('en-GB', { hour12: false });
+        };
+        tick();
+        setInterval(tick, 1000);
+      },
+    };
+  }
+  </script>
+</body>
+</html>

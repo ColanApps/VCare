@@ -16,9 +16,8 @@ function loginViewData(extra = {}) {
   };
 }
 
-function defaultLandingForRole(roleCode) {
-  if (roleCode === 'CORPORATE') return '/portal/corporate';
-  return '/dashboard/my-tasks';
+function defaultLandingForRole() {
+  return '/home';
 }
 
 router.get('/login', requireGuest, (req, res) => {
