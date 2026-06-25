@@ -4,6 +4,7 @@ import { adjustStock } from './stockService.js';
 import { applyDiscountsToItems } from './discountService.js';
 import { postBillJournal, postBillReversalJournal, postRefundJournal, postCreditNoteJournal, syncBillLedgers } from './ledgerService.js';
 import { assertDateNotLocked } from './financeDayLockService.js';
+import { resolveBranchId, branchEntityListWhere } from '../utils/branchHelpers.js';
 
 export function assertCreatePaymentAllowed(paidAmount, roleCode) {
   const paid = parseFloat(paidAmount) || 0;
@@ -12,24 +13,14 @@ export function assertCreatePaymentAllowed(paidAmount, roleCode) {
   }
 }
 
-/** Resolve which branch a bill belongs to (required by schema). */
-export function resolveBillBranchId({ bodyBranchId, userBranchId, customerBranchId }) {
-  const branchId = bodyBranchId || userBranchId || customerBranchId;
-  if (!branchId) {
-    throw new Error('Branch is required. Select a branch or pick a customer that belongs to a branch.');
-  }
-  return branchId;
+/** @deprecated use resolveBranchId from branchHelpers */
+export function resolveBillBranchId(args) {
+  return resolveBranchId(args);
 }
 
-/** List filter — include bills tagged to the branch or for customers at that branch. */
+/** @deprecated use branchEntityListWhere from branchHelpers */
 export function billListWhere(branchFilter = {}) {
-  if (!branchFilter.branchId) return {};
-  return {
-    OR: [
-      { branchId: branchFilter.branchId },
-      { customer: { branchId: branchFilter.branchId } },
-    ],
-  };
+  return branchEntityListWhere(branchFilter);
 }
 
 async function deductStockForBillItems({ billId, billNo, branchId, items, createdById }) {

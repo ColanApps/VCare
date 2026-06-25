@@ -20,6 +20,7 @@ import {
 import { syncConsultationWithClinicalWorkflow } from '../services/clinicalWorkflowService.js';
 import { onConsultationCompleted } from '../services/workflowOrchestrationService.js';
 import { getTreatmentPlanProgress } from '../services/treatmentPlanService.js';
+import { resolveBranchId, showBranchPickerFor, directBranchWhere, combineWhere } from '../utils/branchHelpers.js';
 
 const router = Router();
 router.use(requireAuth, branchScope);
@@ -30,11 +31,12 @@ router.get('/register', requirePermission('customer.create'), async (req, res) =
     prisma.occupation.findMany(),
     prisma.knownBy.findMany(),
   ]);
-  const data = { branches, occupations, knownBy };
+  const showBranchPicker = showBranchPickerFor(req.session.user);
+  const data = { branches, occupations, knownBy, showBranchPicker, user: req.session.user };
   if (isHtmx(req)) return res.render('partials/forms/customer-register.njk', data);
 
   const { page, limit, skip } = paginate(req.query.page);
-  const where = { ...req.branchFilter };
+  const where = directBranchWhere(req.branchFilter);
   const [customers, total] = await Promise.all([
     prisma.customer.findMany({
       where,
@@ -56,10 +58,14 @@ router.get('/register', requirePermission('customer.create'), async (req, res) =
 });
 
 router.post('/register', requirePermission('customer.create'), async (req, res) => {
-  const uhid = await generateNumber('UHID', 'customer', 'uhid');
-  const branchId = req.body.branchId || req.session.user.branchId;
+  try {
+    const branchId = resolveBranchId({
+      bodyBranchId: req.body.branchId,
+      userBranchId: req.session.user.branchId,
+    });
 
-  const customer = await prisma.customer.create({
+    const uhid = await generateNumber('UHID', 'customer', 'uhid');
+    const customer = await prisma.customer.create({
     data: {
       uhid,
       firstName: req.body.firstName,
@@ -102,14 +108,20 @@ router.post('/register', requirePermission('customer.create'), async (req, res) 
     url: `/customer/schedule-pending/${customer.id}`,
     flash: { type: 'success', message: `Customer registered with UHID: ${uhid}` },
   });
+  } catch (err) {
+    return htmxRedirect(req, res, {
+      url: '/customer/search',
+      flash: { type: 'error', message: err.message },
+    });
+  }
 });
 
 router.get('/search', requirePermission('customer.view'), async (req, res) => {
   const { page, limit, skip } = paginate(req.query.page);
   const q = req.query.q?.trim();
-  const where = {
-    ...req.branchFilter,
-    ...(q
+  const where = combineWhere(
+    directBranchWhere(req.branchFilter),
+    q
       ? {
           OR: [
             { uhid: { contains: q } },
@@ -119,10 +131,10 @@ router.get('/search', requirePermission('customer.view'), async (req, res) => {
             { email: { contains: q } },
           ],
         }
-      : {}),
-    ...(req.query.category ? { category: req.query.category } : {}),
-    ...(req.query.status ? { status: req.query.status } : {}),
-  };
+      : {},
+    req.query.category ? { category: req.query.category } : {},
+    req.query.status ? { status: req.query.status } : {},
+  );
 
   const [customers, total] = await Promise.all([
     prisma.customer.findMany({

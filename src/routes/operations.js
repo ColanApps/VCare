@@ -4,6 +4,7 @@ import { requirePermission } from '../middleware/rbac.js';
 import { prisma } from '../lib/prisma.js';
 import { generateNumber } from '../utils/helpers.js';
 import { htmxRedirect } from '../lib/htmx.js';
+import { resolveBranchId } from '../utils/branchHelpers.js';
 import { upload, setUploadCategory, getPublicPath } from '../middleware/upload.js';
 
 const router = Router();
@@ -23,23 +24,34 @@ router.get('/tickets', requirePermission('operations.tickets'), async (req, res)
 });
 
 router.post('/tickets', requirePermission('operations.tickets'), async (req, res) => {
-  const ticketNo = await generateNumber('TKT', 'ticket', 'ticketNo');
-  await prisma.ticket.create({
-    data: {
-      ticketNo,
-      title: req.body.title,
-      description: req.body.description,
-      category: req.body.category,
-      priority: req.body.priority || 'MEDIUM',
-      branchId: req.body.branchId || req.session.user.branchId,
-      createdById: req.session.user.id,
-      assignedToId: req.body.assignedToId || null,
-    },
-  });
-  return htmxRedirect(req, res, {
-    url: '/operations/tickets',
-    flash: { type: 'success', message: `Ticket ${ticketNo} created.` },
-  });
+  try {
+    const branchId = resolveBranchId({
+      bodyBranchId: req.body.branchId,
+      userBranchId: req.session.user.branchId,
+    });
+    const ticketNo = await generateNumber('TKT', 'ticket', 'ticketNo');
+    await prisma.ticket.create({
+      data: {
+        ticketNo,
+        title: req.body.title,
+        description: req.body.description,
+        category: req.body.category,
+        priority: req.body.priority || 'MEDIUM',
+        branchId,
+        createdById: req.session.user.id,
+        assignedToId: req.body.assignedToId || null,
+      },
+    });
+    return htmxRedirect(req, res, {
+      url: '/operations/tickets',
+      flash: { type: 'success', message: `Ticket ${ticketNo} created.` },
+    });
+  } catch (err) {
+    return htmxRedirect(req, res, {
+      url: '/operations/tickets',
+      flash: { type: 'error', message: err.message },
+    });
+  }
 });
 
 router.post('/tickets/:id/status', requirePermission('operations.tickets'), async (req, res) => {
@@ -80,21 +92,32 @@ router.get('/iou/approve', requirePermission('operations.iou'), async (req, res)
 });
 
 router.post('/iou', requirePermission('operations.iou'), setUploadCategory('claims'), upload.single('attachment'), async (req, res) => {
-  const requestNo = await generateNumber('IOU', 'iOURequest', 'requestNo');
-  await prisma.iOURequest.create({
-    data: {
-      requestNo,
-      requesterId: req.session.user.id,
-      branchId: req.body.branchId || req.session.user.branchId,
-      amount: parseFloat(req.body.amount),
-      purpose: req.body.purpose,
-      attachmentPath: req.file ? getPublicPath(req.file.filename, 'claims') : null,
-    },
-  });
-  return htmxRedirect(req, res, {
-    url: '/operations/iou',
-    flash: { type: 'success', message: 'IOU request submitted.' },
-  });
+  try {
+    const branchId = resolveBranchId({
+      bodyBranchId: req.body.branchId,
+      userBranchId: req.session.user.branchId,
+    });
+    const requestNo = await generateNumber('IOU', 'iOURequest', 'requestNo');
+    await prisma.iOURequest.create({
+      data: {
+        requestNo,
+        requesterId: req.session.user.id,
+        branchId,
+        amount: parseFloat(req.body.amount),
+        purpose: req.body.purpose,
+        attachmentPath: req.file ? getPublicPath(req.file.filename, 'claims') : null,
+      },
+    });
+    return htmxRedirect(req, res, {
+      url: '/operations/iou',
+      flash: { type: 'success', message: 'IOU request submitted.' },
+    });
+  } catch (err) {
+    return htmxRedirect(req, res, {
+      url: '/operations/iou',
+      flash: { type: 'error', message: err.message },
+    });
+  }
 });
 
 router.post('/iou/:id/approve', requirePermission('operations.iou'), async (req, res) => {

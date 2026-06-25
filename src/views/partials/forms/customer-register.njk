@@ -28,9 +28,14 @@
     <div class="erp-form-grid">
       <div class="erp-field">
         <label class="erp-label">Branch *</label>
-        <select name="branchId" class="erp-select" required>
-          {% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}
+        {% if showBranchPicker %}
+        <select name="branchId" id="branch-select" class="erp-select" required>
+          <option value="">Select branch</option>
+          {% for b in branches %}<option value="{{ b.id }}" {% if user.branchId == b.id %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
         </select>
+        {% else %}
+        <input type="hidden" name="branchId" value="{{ user.branchId }}">
+        {% endif %}
       </div>
       <div class="erp-field">
         <label class="erp-label">Category</label>

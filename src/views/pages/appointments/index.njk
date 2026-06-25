@@ -9,7 +9,7 @@
 <form method="GET" action="/appointments" class="erp-filter-bar">
   <div class="erp-field">
     <label class="erp-label">Select Date</label>
-    <input type="date" name="date" value="{{ selectedDate.toISOString().split('T')[0] }}" class="erp-input w-auto">
+    <input type="date" name="date" value="{{ selectedDateParam }}" class="erp-input w-auto">
   </div>
   <button type="submit" class="erp-btn-secondary">View Day</button>
   <a href="/appointments/search" class="erp-btn-ghost">Search All</a>

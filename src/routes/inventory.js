@@ -4,6 +4,7 @@ import { requirePermission, branchScope } from '../middleware/rbac.js';
 import { prisma } from '../lib/prisma.js';
 import { generateNumber } from '../utils/helpers.js';
 import { htmxRedirect, isHtmx } from '../lib/htmx.js';
+import { resolveBranchId, branchEntityListWhere } from '../utils/branchHelpers.js';
 import { fulfillIndent, getStockMovements, recordClinicalConsumption, createStockTransfer, approveStockTransfer, completeStockTransfer, adjustStock } from '../services/stockService.js';
 import { createIndent } from '../services/indentService.js';
 import { createStockOutward, authorizeStockOutward, recordPhysicalAudit } from '../services/stockOutwardService.js';
@@ -73,7 +74,7 @@ router.post('/stock/adjust', requirePermission('inventory.stock'), async (req, r
   try {
     await adjustStock({
       productId: req.body.productId,
-      branchId: req.body.branchId || req.session.user.branchId,
+      branchId: resolveBranchId({ bodyBranchId: req.body.branchId, userBranchId: req.session.user.branchId }),
       quantity: parseInt(req.body.quantity, 10),
       movementType: req.body.movementType || 'ADJUSTMENT',
       notes: req.body.notes,
@@ -90,7 +91,7 @@ router.get('/stock', requirePermission('inventory.stock'), async (req, res) => {
   const type = req.query.type || 'BILLABLE';
   const stocks = await prisma.stock.findMany({
     where: {
-      ...(req.branchFilter.branchId ? { branchId: req.branchFilter.branchId } : {}),
+      ...(branchEntityListWhere(req.branchFilter)),
       product: { type },
     },
     include: { product: true, branch: true },
@@ -140,7 +141,7 @@ router.get('/clinical-consumption', requirePermission('inventory.clinical'), asy
 router.post('/clinical-consumption', requirePermission('inventory.clinical'), async (req, res) => {
   try {
     await recordClinicalConsumption({
-      branchId: req.body.branchId || req.session.user.branchId,
+      branchId: resolveBranchId({ bodyBranchId: req.body.branchId, userBranchId: req.session.user.branchId }),
       productId: req.body.productId,
       quantity: parseInt(req.body.quantity, 10),
       customerId: req.body.customerId || null,
@@ -190,7 +191,7 @@ router.post('/indents/create', requirePermission('inventory.indent'), async (req
   const items = JSON.parse(req.body.items || '[]');
   try {
     const indent = await createIndent({
-      branchId: req.body.branchId || req.session.user.branchId,
+      branchId: resolveBranchId({ bodyBranchId: req.body.branchId, userBranchId: req.session.user.branchId }),
       type: req.body.type || 'BILLABLE',
       items,
       createdById: req.session.user.id,
@@ -325,7 +326,7 @@ router.get('/stock-outward', requirePermission('inventory.outward'), async (req,
 router.post('/stock-outward', requirePermission('inventory.outward'), async (req, res) => {
   const items = JSON.parse(req.body.items || '[]');
   const outward = await createStockOutward({
-    branchId: req.body.branchId || req.session.user.branchId,
+    branchId: resolveBranchId({ bodyBranchId: req.body.branchId, userBranchId: req.session.user.branchId }),
     stockType: req.body.stockType,
     destination: req.body.destination,
     notes: req.body.notes,
@@ -374,7 +375,7 @@ router.get('/physical-stock', requirePermission('inventory.stock'), async (req, 
 router.post('/physical-stock', requirePermission('inventory.stock'), async (req, res) => {
   try {
     const audit = await recordPhysicalAudit({
-      branchId: req.body.branchId || req.session.user.branchId,
+      branchId: resolveBranchId({ bodyBranchId: req.body.branchId, userBranchId: req.session.user.branchId }),
       productId: req.body.productId,
       physicalQty: req.body.physicalQty,
       notes: req.body.notes,

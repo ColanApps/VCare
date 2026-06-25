@@ -1,20 +1,27 @@
 {% from "macros/ui.njk" import formFooter %}
-<form method="POST" action="/appointments/create" class="erp-modal-form"
+<form method="POST" action="/appointments/create" id="appointment-form" class="erp-modal-form"
   hx-post="/appointments/create" hx-swap="none">
   <div class="erp-form-grid">
     <div class="erp-field sm:col-span-2">
       <label class="erp-label">Customer *</label>
-      <select name="customerId" class="erp-select" required>
-        <option value="">Select customer</option>
+      <select name="customerId" id="customer-select" class="erp-select" required>
+        <option value="" data-branch="">Select customer</option>
         {% for c in customers %}
-        <option value="{{ c.id }}" {% if preselectedCustomer == c.id %}selected{% endif %}>{{ c.firstName }} {{ c.lastName }} ({{ c.uhid }})</option>
+        <option value="{{ c.id }}" data-branch="{{ c.branchId }}" {% if preselectedCustomer == c.id %}selected{% endif %}>{{ c.firstName }} {{ c.lastName }} ({{ c.uhid }})</option>
         {% endfor %}
       </select>
     </div>
+    {% if showBranchPicker %}
     <div class="erp-field">
-      <label class="erp-label">Branch</label>
-      <select name="branchId" class="erp-select">{% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select>
+      <label class="erp-label">Branch *</label>
+      <select name="branchId" id="branch-select" class="erp-select" required>
+        <option value="">Select branch</option>
+        {% for b in branches %}
+        <option value="{{ b.id }}" {% if user.branchId == b.id %}selected{% endif %}>{{ b.name }}</option>
+        {% endfor %}
+      </select>
     </div>
+    {% endif %}
     <div class="erp-field">
       <label class="erp-label">Consultant</label>
       <select name="consultantId" class="erp-select">
@@ -42,7 +49,7 @@
     </div>
     <div class="erp-field">
       <label class="erp-label">Date & Time *</label>
-      <input type="datetime-local" name="scheduledAt" class="erp-input" required>
+      <input type="datetime-local" name="scheduledAt" id="appointment-scheduled-at" class="erp-input" required>
     </div>
     <div class="erp-field">
       <label class="erp-label">Duration (mins)</label>
@@ -61,3 +68,19 @@
   </div>
   {{ formFooter('/appointments') }}
 </form>
+<script>
+window.initAppointmentCreateForm = function initAppointmentCreateForm() {
+  const dt = document.getElementById('appointment-scheduled-at');
+  if (dt && !dt.value) {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    dt.value = now.toISOString().slice(0, 16);
+  }
+  window.initBranchCustomerSync?.();
+};
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => window.initAppointmentCreateForm?.());
+} else {
+  window.initAppointmentCreateForm?.();
+}
+</script>

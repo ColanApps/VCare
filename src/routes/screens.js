@@ -12,6 +12,8 @@ import { rowsToCsv } from '../services/registryDepthService.js';
 import { prisma } from '../lib/prisma.js';
 
 import { isHtmx, redirectOrHtmx } from '../lib/htmx.js';
+import { createAppointment } from '../services/appointmentService.js';
+import { showBranchPickerFor } from '../utils/branchHelpers.js';
 
 
 
@@ -275,15 +277,21 @@ router.get('/appointments/fix-new/form', requirePermission('appointments.create'
 
   const [customers, branches, consultants] = await Promise.all([
 
-    prisma.customer.findMany({ take: 200, orderBy: { registeredAt: 'desc' } }),
+    prisma.customer.findMany({ where: req.branchFilter, take: 200, orderBy: { registeredAt: 'desc' } }),
 
     prisma.branch.findMany({ where: { isActive: true } }),
 
-    prisma.user.findMany({ where: { role: { name: 'CONSULTANT' }, isActive: true }, take: 50 }),
+    prisma.user.findMany({ where: { role: { code: 'CONSULTANT' }, isActive: true }, take: 50 }),
 
   ]);
 
-  res.render('partials/forms/fix-appointment.njk', { customers, branches, consultants, user: req.session.user });
+  res.render('partials/forms/fix-appointment.njk', {
+    customers,
+    branches,
+    consultants,
+    user: req.session.user,
+    showBranchPicker: showBranchPickerFor(req.session.user),
+  });
 
 });
 
@@ -293,33 +301,22 @@ router.post('/appointments/fix-new', requirePermission('appointments.create'), a
 
   try {
 
-    await prisma.appointment.create({
-
-      data: {
-
-        customerId: req.body.customerId,
-
-        branchId: req.body.branchId || req.session.user.branchId,
-
-        consultantId: req.body.consultantId || req.session.user.id,
-
-        type: req.body.type || 'CONSULTATION',
-
-        scheduledAt: new Date(req.body.scheduledAt),
-
-        status: 'SCHEDULED',
-
-        source: 'WALK_IN',
-
-      },
-
+    const { appointmentNo } = await createAppointment({
+      customerId: req.body.customerId,
+      bodyBranchId: req.body.branchId,
+      userBranchId: req.session.user.branchId,
+      consultantId: req.body.consultantId || req.session.user.id,
+      type: req.body.type,
+      scheduledAt: req.body.scheduledAt,
+      bookedById: req.session.user.id,
+      source: 'WALK_IN',
     });
 
     return redirectOrHtmx(req, res, {
 
       redirect: '/appointments',
 
-      flash: { type: 'success', message: 'Appointment created.' },
+      flash: { type: 'success', message: `Appointment ${appointmentNo} created.` },
 
       triggers: { 'erp-close-modal': true },
 

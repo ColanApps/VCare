@@ -108,6 +108,7 @@ window.initBillingCreateForm = async function initBillingCreateForm() {
   const form = document.getElementById('bill-form');
   if (!form) return;
   billCalculator.reset();
+  window.initBranchCustomerSync?.();
 {% if prefillItems and prefillItems.length %}
   const custCategory = document.getElementById('customer-select')?.selectedOptions[0]?.dataset.category || 'ALL';
   for (const item of {{ prefillItems | dump | safe }}) {
@@ -119,16 +120,6 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => window.initBillingCreateForm?.());
 } else {
   window.initBillingCreateForm?.();
-}
-const customerSelect = document.getElementById('customer-select');
-const branchSelect = document.getElementById('branch-select');
-if (customerSelect && branchSelect) {
-  const syncBranchFromCustomer = () => {
-    const branchId = customerSelect.selectedOptions[0]?.dataset.branch;
-    if (branchId) branchSelect.value = branchId;
-  };
-  customerSelect.addEventListener('change', syncBranchFromCustomer);
-  syncBranchFromCustomer();
 }
 async function addBillItem() {
   const sel = document.getElementById('item-select');

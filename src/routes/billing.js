@@ -4,6 +4,7 @@ import { requirePermission, branchScope } from '../middleware/rbac.js';
 import { prisma } from '../lib/prisma.js';
 import { generateNumber, paginate, buildPagination } from '../utils/helpers.js';
 import { createStandardBill, cancelBill, issueRefund, issueCreditNote, getCreditNotes, assertCreatePaymentAllowed, resolveBillBranchId, billListWhere } from '../services/billingService.js';
+import { combineWhere } from '../utils/branchHelpers.js';
 import { getProcedureBillPrefill, linkBillToProcedure } from '../services/clinicalWorkflowService.js';
 import { assertDateNotLocked } from '../services/financeDayLockService.js';
 import { notifyBillWorkflow } from '../services/workflowOrchestrationService.js';
@@ -34,22 +35,19 @@ const router = Router();
 router.use(requireAuth, branchScope);
 
 function buildBillIndexWhere(branchFilter, query = {}) {
-  const clauses = [];
-  const branchClause = billListWhere(branchFilter);
-  if (Object.keys(branchClause).length) clauses.push(branchClause);
-  if (query.status) clauses.push({ status: query.status });
-  if (query.q) {
-    clauses.push({
-      OR: [
-        { billNo: { contains: query.q } },
-        { customer: { firstName: { contains: query.q } } },
-        { customer: { uhid: { contains: query.q } } },
-      ],
-    });
-  }
-  if (!clauses.length) return {};
-  if (clauses.length === 1) return clauses[0];
-  return { AND: clauses };
+  return combineWhere(
+    billListWhere(branchFilter),
+    query.status ? { status: query.status } : {},
+    query.q
+      ? {
+          OR: [
+            { billNo: { contains: query.q } },
+            { customer: { firstName: { contains: query.q } } },
+            { customer: { uhid: { contains: query.q } } },
+          ],
+        }
+      : {},
+  );
 }
 
 router.get('/', requirePermission('billing.view'), async (req, res) => {

@@ -2,28 +2,48 @@ import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { requirePermission, branchScope } from '../middleware/rbac.js';
 import { prisma } from '../lib/prisma.js';
-import { generateNumber, paginate, buildPagination } from '../utils/helpers.js';
+import { paginate, buildPagination } from '../utils/helpers.js';
 import { htmxRedirect, isHtmx } from '../lib/htmx.js';
-import { sendNotification } from '../utils/audit.js';
-import { onAppointmentBooked } from '../services/workflowOrchestrationService.js';
-import { getActiveTreatmentSlip, attachProcedureToSlip } from '../services/treatmentPlanService.js';
+import { createAppointment } from '../services/appointmentService.js';
 import {
   startProcedure,
   completeProcedureClinical,
 } from '../services/clinicalWorkflowService.js';
+import {
+  branchEntityListWhere,
+  combineWhere,
+  showBranchPickerFor,
+  formatDateQueryParam,
+} from '../utils/branchHelpers.js';
 import { upload, setUploadCategory, getPublicPath } from '../middleware/upload.js';
 import { startOfDay, endOfDay, addDays } from 'date-fns';
 
 const router = Router();
 router.use(requireAuth, branchScope);
 
+function buildAppointmentSearchWhere(branchFilter, query = {}) {
+  return combineWhere(
+    branchEntityListWhere(branchFilter),
+    query.status ? { status: query.status } : {},
+    query.q
+      ? {
+          OR: [
+            { appointmentNo: { contains: query.q } },
+            { customer: { firstName: { contains: query.q } } },
+            { customer: { phone: { contains: query.q } } },
+          ],
+        }
+      : {},
+  );
+}
+
 router.get('/', requirePermission('appointments.view'), async (req, res) => {
   const date = req.query.date ? new Date(req.query.date) : new Date();
   const appointments = await prisma.appointment.findMany({
-    where: {
-      ...req.branchFilter,
-      scheduledAt: { gte: startOfDay(date), lte: endOfDay(date) },
-    },
+    where: combineWhere(
+      branchEntityListWhere(req.branchFilter),
+      { scheduledAt: { gte: startOfDay(date), lte: endOfDay(date) } },
+    ),
     include: { customer: true, consultant: true, branch: true },
     orderBy: { scheduledAt: 'asc' },
   });
@@ -32,6 +52,7 @@ router.get('/', requirePermission('appointments.view'), async (req, res) => {
     activeModule: 'appointments',
     appointments,
     selectedDate: date,
+    selectedDateParam: formatDateQueryParam(date),
   });
 });
 
@@ -42,11 +63,13 @@ router.get('/create', requirePermission('appointments.create'), async (req, res)
     prisma.branch.findMany({ where: { isActive: true } }),
     prisma.treatment.findMany({ where: { isActive: true } }),
   ]);
+  const showBranchPicker = showBranchPickerFor(req.session.user);
   const data = {
     customers,
     consultants,
     branches,
     treatments,
+    showBranchPicker,
     preselectedCustomer: req.query.customerId,
     user: req.session.user,
   };
@@ -54,10 +77,10 @@ router.get('/create', requirePermission('appointments.create'), async (req, res)
 
   const date = new Date();
   const appointments = await prisma.appointment.findMany({
-    where: {
-      ...req.branchFilter,
-      scheduledAt: { gte: startOfDay(date), lte: endOfDay(date) },
-    },
+    where: combineWhere(
+      branchEntityListWhere(req.branchFilter),
+      { scheduledAt: { gte: startOfDay(date), lte: endOfDay(date) } },
+    ),
     include: { customer: true, consultant: true, branch: true },
     orderBy: { scheduledAt: 'asc' },
   });
@@ -66,82 +89,46 @@ router.get('/create', requirePermission('appointments.create'), async (req, res)
     activeModule: 'appointments',
     appointments,
     selectedDate: date,
+    selectedDateParam: formatDateQueryParam(date),
     autoOpenModal: { title: 'Book Appointment', size: 'xl', url: '/appointments/create' },
   });
 });
 
 router.post('/create', requirePermission('appointments.create'), async (req, res) => {
-  const appointmentNo = await generateNumber('APT', 'appointment', 'appointmentNo');
-  const branchId = req.body.branchId || req.session.user.branchId;
-
-  const appointment = await prisma.appointment.create({
-    data: {
-      appointmentNo,
+  try {
+    const { appointmentNo, scheduledDate } = await createAppointment({
       customerId: req.body.customerId,
-      consultantId: req.body.consultantId || null,
-      branchId,
-      treatmentId: req.body.treatmentId || null,
-      type: req.body.type || 'CONSULTATION',
-      category: req.body.category || 'HAIR',
-      scheduledAt: new Date(req.body.scheduledAt),
-      duration: parseInt(req.body.duration, 10) || 30,
-      status: 'SCHEDULED',
+      bodyBranchId: req.body.branchId,
+      userBranchId: req.session.user.branchId,
+      consultantId: req.body.consultantId,
+      treatmentId: req.body.treatmentId,
+      type: req.body.type,
+      category: req.body.category,
+      scheduledAt: req.body.scheduledAt,
+      duration: req.body.duration,
       leadSource: req.body.leadSource,
       campaign: req.body.campaign,
       notes: req.body.notes,
-      source: req.body.source || 'WALK_IN',
-    },
-    include: { customer: true },
-  });
+      source: req.body.source,
+      bookedById: req.session.user.id,
+    });
 
-  await onAppointmentBooked({
-    appointment,
-    customer: appointment.customer,
-    bookedById: req.session.user.id,
-    source: req.body.source || 'WALK_IN',
-  });
-
-  if (appointment.customer.email) {
-    await sendNotification({
-      type: 'EMAIL',
-      recipient: appointment.customer.email,
-      subject: `Appointment Confirmed - ${appointmentNo}`,
-      message: `Your appointment is scheduled for ${new Date(req.body.scheduledAt).toLocaleString('en-IN')}.`,
-      module: 'APPOINTMENTS',
-      entityId: appointment.id,
+    const dateParam = formatDateQueryParam(scheduledDate);
+    return htmxRedirect(req, res, {
+      url: `/appointments?date=${dateParam}`,
+      flash: { type: 'success', message: `Appointment ${appointmentNo} created.` },
+    });
+  } catch (err) {
+    return htmxRedirect(req, res, {
+      url: '/appointments',
+      flash: { type: 'error', message: err.message },
     });
   }
-  if (appointment.customer.phone) {
-    await sendNotification({
-      type: 'SMS',
-      recipient: appointment.customer.phone,
-      message: `VCare: Appointment ${appointmentNo} confirmed for ${new Date(req.body.scheduledAt).toLocaleDateString('en-IN')}.`,
-      module: 'APPOINTMENTS',
-      entityId: appointment.id,
-    });
-  }
-
-  return htmxRedirect(req, res, {
-    url: '/appointments',
-    flash: { type: 'success', message: `Appointment ${appointmentNo} created.` },
-  });
 });
 
 router.get('/search', requirePermission('appointments.view'), async (req, res) => {
   const { page, limit, skip } = paginate(req.query.page);
-  const where = {
-    ...req.branchFilter,
-    ...(req.query.status ? { status: req.query.status } : {}),
-    ...(req.query.q
-      ? {
-          OR: [
-            { appointmentNo: { contains: req.query.q } },
-            { customer: { firstName: { contains: req.query.q } } },
-            { customer: { phone: { contains: req.query.q } } },
-          ],
-        }
-      : {}),
-  };
+  const where = buildAppointmentSearchWhere(req.branchFilter, req.query);
 
   const [appointments, total] = await Promise.all([
     prisma.appointment.findMany({
@@ -412,7 +399,7 @@ router.post('/procedures/:id/cancel', requirePermission('appointments.procedures
 
 router.get('/:id', requirePermission('appointments.view'), async (req, res) => {
   const appointment = await prisma.appointment.findFirst({
-    where: { id: req.params.id, ...req.branchFilter },
+    where: combineWhere(branchEntityListWhere(req.branchFilter), { id: req.params.id }),
     include: {
       customer: true,
       consultant: true,

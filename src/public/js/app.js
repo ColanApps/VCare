@@ -20,6 +20,9 @@ function erpShell(opts = {}) {
           window.billCalculator?.reset();
           window.initBillingCreateForm?.();
         }
+        if (e.detail.target?.id === 'erp-modal-body' && document.getElementById('appointment-form')) {
+          window.initAppointmentCreateForm?.();
+        }
         document.querySelectorAll('[data-currency]').forEach((el) => {
           if (el.dataset.currencyBound) return;
           el.dataset.currencyBound = '1';
@@ -113,13 +116,6 @@ document.addEventListener('erp-close-modal', () => {
   if (root._x_dataStack?.[0]?.closeModal) root._x_dataStack[0].closeModal();
 });
 
-document.querySelectorAll('[data-currency]').forEach((el) => {
-  el.addEventListener('blur', () => {
-    const val = parseFloat(el.value.replace(/[^0-9.]/g, ''));
-    if (!isNaN(val)) el.value = val.toFixed(2);
-  });
-});
-
 window.billCalculator = {
   items: [],
   reset() {
@@ -197,3 +193,27 @@ window.billCalculator = {
     el('bill-total', Math.max(0, total));
   },
 };
+
+/** Sync branch dropdown when customer selection changes (appointment, billing, etc.). */
+window.initBranchCustomerSync = function initBranchCustomerSync() {
+  const customerSelect = document.getElementById('customer-select');
+  const branchSelect = document.getElementById('branch-select');
+  if (!customerSelect || !branchSelect) return;
+  const sync = () => {
+    const branchId = customerSelect.selectedOptions[0]?.dataset?.branch;
+    if (branchId) branchSelect.value = branchId;
+  };
+  if (customerSelect._branchSyncHandler) {
+    customerSelect.removeEventListener('change', customerSelect._branchSyncHandler);
+  }
+  customerSelect._branchSyncHandler = sync;
+  customerSelect.addEventListener('change', sync);
+  sync();
+};
+
+document.querySelectorAll('[data-currency]').forEach((el) => {
+  el.addEventListener('blur', () => {
+    const val = parseFloat(el.value.replace(/[^0-9.]/g, ''));
+    if (!isNaN(val)) el.value = val.toFixed(2);
+  });
+});

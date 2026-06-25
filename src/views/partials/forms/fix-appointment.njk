@@ -1,25 +1,28 @@
 {% from "macros/ui.njk" import formFooter %}
-<form method="POST" action="/appointments/fix-new" class="erp-modal-form"
+<form method="POST" action="/appointments/fix-new" id="appointment-form" class="erp-modal-form"
   hx-post="/appointments/fix-new"
   hx-swap="none">
   <div class="erp-form-grid">
     <div class="erp-field col-span-full">
       <label class="erp-label">Customer *</label>
-      <select name="customerId" class="erp-select" required>
-        <option value="">Select customer</option>
+      <select name="customerId" id="customer-select" class="erp-select" required>
+        <option value="" data-branch="">Select customer</option>
         {% for c in customers %}
-        <option value="{{ c.id }}">{{ c.uhid }} — {{ c.firstName }} {{ c.lastName }}</option>
+        <option value="{{ c.id }}" data-branch="{{ c.branchId }}">{{ c.uhid }} — {{ c.firstName }} {{ c.lastName }}</option>
         {% endfor %}
       </select>
     </div>
+    {% if showBranchPicker %}
     <div class="erp-field">
       <label class="erp-label">Branch *</label>
-      <select name="branchId" class="erp-select" required>
+      <select name="branchId" id="branch-select" class="erp-select" required>
+        <option value="">Select branch</option>
         {% for b in branches %}
         <option value="{{ b.id }}" {% if b.id == user.branchId %}selected{% endif %}>{{ b.name }}</option>
         {% endfor %}
       </select>
     </div>
+    {% endif %}
     <div class="erp-field">
       <label class="erp-label">Consultant</label>
       <select name="consultantId" class="erp-select">

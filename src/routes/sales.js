@@ -10,13 +10,14 @@ import {
 } from '../services/salesOrderService.js';
 import { streamDeliveryChallanPdf } from '../services/documentPdfService.js';
 import { htmxRedirect, isHtmx } from '../lib/htmx.js';
+import { resolveBranchId, branchEntityListWhere } from '../utils/branchHelpers.js';
 
 const router = Router();
 router.use(requireAuth, branchScope);
 
 router.get('/orders', requirePermission('sales.view'), async (req, res) => {
   const orders = await prisma.salesOrder.findMany({
-    where: req.branchFilter.branchId ? { branchId: req.branchFilter.branchId } : {},
+    where: branchEntityListWhere(req.branchFilter),
     include: { customer: true, branch: true, items: { include: { product: true } } },
     orderBy: { createdAt: 'desc' },
   });
@@ -32,7 +33,7 @@ router.get('/orders/create', requirePermission('sales.create'), async (req, res)
   if (isHtmx(req)) return res.render('partials/forms/sales-order-create.njk', data);
 
   const orders = await prisma.salesOrder.findMany({
-    where: req.branchFilter.branchId ? { branchId: req.branchFilter.branchId } : {},
+    where: branchEntityListWhere(req.branchFilter),
     include: { customer: true, branch: true, items: { include: { product: true } } },
     orderBy: { createdAt: 'desc' },
   });
@@ -45,18 +46,33 @@ router.get('/orders/create', requirePermission('sales.create'), async (req, res)
 });
 
 router.post('/orders/create', requirePermission('sales.create'), async (req, res) => {
-  const items = JSON.parse(req.body.items || '[]');
-  const order = await createSalesOrder({
-    customerId: req.body.customerId,
-    branchId: req.body.branchId || req.session.user.branchId,
-    items,
-    notes: req.body.notes,
-    createdById: req.session.user.id,
-  });
-  return htmxRedirect(req, res, {
-    url: '/sales/orders',
-    flash: { type: 'success', message: `Sales order ${order.orderNo} created.` },
-  });
+  try {
+    const customer = await prisma.customer.findUnique({ where: { id: req.body.customerId } });
+    if (!customer) throw new Error('Customer not found.');
+    const branchId = resolveBranchId({
+      bodyBranchId: req.body.branchId,
+      userBranchId: req.session.user.branchId,
+      customerBranchId: customer.branchId,
+    });
+    const items = JSON.parse(req.body.items || '[]');
+    if (!items.length) throw new Error('Add at least one product to the order.');
+    const order = await createSalesOrder({
+      customerId: req.body.customerId,
+      branchId,
+      items,
+      notes: req.body.notes,
+      createdById: req.session.user.id,
+    });
+    return htmxRedirect(req, res, {
+      url: '/sales/orders',
+      flash: { type: 'success', message: `Sales order ${order.orderNo} created.` },
+    });
+  } catch (err) {
+    return htmxRedirect(req, res, {
+      url: '/sales/orders',
+      flash: { type: 'error', message: err.message },
+    });
+  }
 });
 
 router.post('/orders/:id/challan', requirePermission('sales.create'), async (req, res) => {
