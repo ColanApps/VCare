@@ -1735,3 +1735,13 @@ model JournalLine {
   credit         Float          @default(0)
   memo           String?
 }
+
+// Login sessions — table created/managed by express-mysql-session (src/lib/sessionStore.js).
+// Declared here so `prisma db push` does not drop it as an "unknown" table.
+model ExpressSession {
+  session_id String  @id @db.VarChar(128)
+  expires    Int     @db.UnsignedInt
+  data       String? @db.MediumText
+
+  @@map("express_sessions")
+}
