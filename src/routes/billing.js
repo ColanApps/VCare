@@ -3,7 +3,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { requirePermission, branchScope } from '../middleware/rbac.js';
 import { prisma } from '../lib/prisma.js';
 import { generateNumber, paginate, buildPagination } from '../utils/helpers.js';
-import { createStandardBill, cancelBill, issueRefund, issueCreditNote, getCreditNotes, assertCreatePaymentAllowed } from '../services/billingService.js';
+import { createStandardBill, cancelBill, issueRefund, issueCreditNote, getCreditNotes, assertCreatePaymentAllowed, resolveBillBranchId, billListWhere } from '../services/billingService.js';
 import { getProcedureBillPrefill, linkBillToProcedure } from '../services/clinicalWorkflowService.js';
 import { assertDateNotLocked } from '../services/financeDayLockService.js';
 import { notifyBillWorkflow } from '../services/workflowOrchestrationService.js';
@@ -33,21 +33,28 @@ import {
 const router = Router();
 router.use(requireAuth, branchScope);
 
+function buildBillIndexWhere(branchFilter, query = {}) {
+  const clauses = [];
+  const branchClause = billListWhere(branchFilter);
+  if (Object.keys(branchClause).length) clauses.push(branchClause);
+  if (query.status) clauses.push({ status: query.status });
+  if (query.q) {
+    clauses.push({
+      OR: [
+        { billNo: { contains: query.q } },
+        { customer: { firstName: { contains: query.q } } },
+        { customer: { uhid: { contains: query.q } } },
+      ],
+    });
+  }
+  if (!clauses.length) return {};
+  if (clauses.length === 1) return clauses[0];
+  return { AND: clauses };
+}
+
 router.get('/', requirePermission('billing.view'), async (req, res) => {
   const { page, limit, skip } = paginate(req.query.page);
-  const where = {
-    ...req.branchFilter,
-    ...(req.query.status ? { status: req.query.status } : {}),
-    ...(req.query.q
-      ? {
-          OR: [
-            { billNo: { contains: req.query.q } },
-            { customer: { firstName: { contains: req.query.q } } },
-            { customer: { uhid: { contains: req.query.q } } },
-          ],
-        }
-      : {}),
-  };
+  const where = buildBillIndexWhere(req.branchFilter, req.query);
 
   const [bills, total] = await Promise.all([
     prisma.bill.findMany({
@@ -79,11 +86,15 @@ router.get('/credit-notes', requirePermission('billing.refunds'), async (req, re
 });
 
 router.get('/create', requirePermission('billing.create'), async (req, res) => {
-  const [customers, treatments, products] = await Promise.all([
+  const [customers, treatments, products, branches] = await Promise.all([
     prisma.customer.findMany({ where: req.branchFilter, take: 100 }),
     prisma.treatment.findMany({ where: { isActive: true } }),
     prisma.product.findMany({ where: { isActive: true, type: 'BILLABLE' }, take: 100 }),
+    prisma.branch.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }),
   ]);
+
+  const showBranchPicker = !req.session.user.branchId
+    || ['SUPER_ADMIN', 'CORPORATE'].includes(req.session.user.roleCode);
 
   let preselectedCustomer = req.query.customerId;
   let preselectedProcedure = req.query.procedureId || null;
@@ -102,6 +113,8 @@ router.get('/create', requirePermission('billing.create'), async (req, res) => {
     customers,
     treatments,
     products,
+    branches,
+    showBranchPicker,
     preselectedCustomer,
     preselectedProcedure,
     prefillItems,
@@ -109,7 +122,7 @@ router.get('/create', requirePermission('billing.create'), async (req, res) => {
   if (isHtmx(req)) return res.render('partials/forms/billing-create.njk', data);
 
   const { page, limit, skip } = paginate(req.query.page);
-  const where = { ...req.branchFilter };
+  const where = billListWhere(req.branchFilter);
   const [bills, total] = await Promise.all([
     prisma.bill.findMany({
       where,
@@ -140,9 +153,16 @@ router.post('/preview-discount', requirePermission('billing.create'), async (req
 
 router.post('/create', requirePermission('billing.create'), async (req, res) => {
   try {
-    const branchId = req.body.branchId || req.session.user.branchId;
-    await assertDateNotLocked(branchId, new Date(), 'create bills');
     const customer = await prisma.customer.findUnique({ where: { id: req.body.customerId } });
+    if (!customer) throw new Error('Customer not found.');
+
+    const branchId = resolveBillBranchId({
+      bodyBranchId: req.body.branchId,
+      userBranchId: req.session.user.branchId,
+      customerBranchId: customer.branchId,
+    });
+
+    await assertDateNotLocked(branchId, new Date(), 'create bills');
     const rawItems = JSON.parse(req.body.items || '[]');
     if (!rawItems.length) {
       throw new Error('Add at least one line item to the bill.');
@@ -182,7 +202,7 @@ router.post('/create', requirePermission('billing.create'), async (req, res) => 
       ? `Bill ${billNo} created with installment plan for balance ${bill.balanceAmount}.`
       : `Bill ${billNo} created successfully.`;
     return htmxRedirect(req, res, {
-      url: `/billing/${bill.id}`,
+      url: '/billing',
       flash: { type: 'success', message: msg },
     });
   } catch (err) {
@@ -328,10 +348,17 @@ router.get('/pharmacy', requirePermission('billing.pharmacy'), async (req, res) 
 router.post('/pharmacy', requirePermission('billing.pharmacy'), async (req, res) => {
   try {
     assertCreatePaymentAllowed(req.body.paidAmount, req.session.user.roleCode);
+    const customer = await prisma.customer.findUnique({ where: { id: req.body.customerId } });
+    if (!customer) throw new Error('Customer not found.');
+    const branchId = resolveBillBranchId({
+      bodyBranchId: req.body.branchId,
+      userBranchId: req.session.user.branchId,
+      customerBranchId: customer.branchId,
+    });
     const items = JSON.parse(req.body.items || '[]');
     const bill = await createPharmacyBill({
       customerId: req.body.customerId,
-      branchId: req.body.branchId || req.session.user.branchId,
+      branchId,
       createdById: req.session.user.id,
       items,
       paymentMode: req.body.paymentMode,
@@ -370,10 +397,17 @@ router.get('/pharmacy-b2b', requirePermission('billing.pharmacy.b2b'), async (re
 router.post('/pharmacy-b2b', requirePermission('billing.pharmacy.b2b'), async (req, res) => {
   try {
     assertCreatePaymentAllowed(req.body.paidAmount, req.session.user.roleCode);
+    const customer = await prisma.customer.findUnique({ where: { id: req.body.customerId } });
+    if (!customer) throw new Error('Customer not found.');
+    const branchId = resolveBillBranchId({
+      bodyBranchId: req.body.branchId,
+      userBranchId: req.session.user.branchId,
+      customerBranchId: customer.branchId,
+    });
     const items = JSON.parse(req.body.items || '[]');
     const bill = await createPharmacyB2BBill({
       customerId: req.body.customerId,
-      branchId: req.body.branchId || req.session.user.branchId,
+      branchId,
       createdById: req.session.user.id,
       items,
       paymentMode: req.body.paymentMode,
@@ -414,10 +448,17 @@ router.get('/service-b2b', requirePermission('billing.service.b2b'), async (req,
 
 router.post('/service-b2b', requirePermission('billing.service.b2b'), async (req, res) => {
   try {
+    const customer = await prisma.customer.findUnique({ where: { id: req.body.customerId } });
+    if (!customer) throw new Error('Customer not found.');
+    const branchId = resolveBillBranchId({
+      bodyBranchId: req.body.branchId,
+      userBranchId: req.session.user.branchId,
+      customerBranchId: customer.branchId,
+    });
     const items = JSON.parse(req.body.items || '[]');
     const bill = await createServiceB2BBill({
       customerId: req.body.customerId,
-      branchId: req.body.branchId || req.session.user.branchId,
+      branchId,
       createdById: req.session.user.id,
       roleCode: req.session.user.roleCode,
       items,

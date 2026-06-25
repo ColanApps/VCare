@@ -7,12 +7,23 @@
       <div class="erp-card">
         <div class="erp-card-header"><h3 class="font-semibold text-sm">Bill Details</h3></div>
         <div class="erp-card-body erp-form-grid">
+          {% if showBranchPicker %}
+          <div class="erp-field sm:col-span-2">
+            <label class="erp-label">Branch *</label>
+            <select name="branchId" id="branch-select" class="erp-select" required>
+              <option value="">Select branch</option>
+              {% for br in branches %}
+              <option value="{{ br.id }}">{{ br.name }} ({{ br.code }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
           <div class="erp-field sm:col-span-2">
             <label class="erp-label">Customer *</label>
             <select name="customerId" id="customer-select" class="erp-select" required>
-              <option value="" data-category="ALL">Select customer</option>
+              <option value="" data-category="ALL" data-branch="">Select customer</option>
               {% for c in customers %}
-              <option value="{{ c.id }}" data-category="{{ c.category }}" {% if preselectedCustomer == c.id %}selected{% endif %}>{{ c.firstName }} {{ c.lastName }} ({{ c.uhid }})</option>
+              <option value="{{ c.id }}" data-category="{{ c.category }}" data-branch="{{ c.branchId }}" {% if preselectedCustomer == c.id %}selected{% endif %}>{{ c.firstName }} {{ c.lastName }} ({{ c.uhid }})</option>
               {% endfor %}
             </select>
           </div>
@@ -108,6 +119,16 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => window.initBillingCreateForm?.());
 } else {
   window.initBillingCreateForm?.();
+}
+const customerSelect = document.getElementById('customer-select');
+const branchSelect = document.getElementById('branch-select');
+if (customerSelect && branchSelect) {
+  const syncBranchFromCustomer = () => {
+    const branchId = customerSelect.selectedOptions[0]?.dataset.branch;
+    if (branchId) branchSelect.value = branchId;
+  };
+  customerSelect.addEventListener('change', syncBranchFromCustomer);
+  syncBranchFromCustomer();
 }
 async function addBillItem() {
   const sel = document.getElementById('item-select');

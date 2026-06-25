@@ -12,6 +12,26 @@ export function assertCreatePaymentAllowed(paidAmount, roleCode) {
   }
 }
 
+/** Resolve which branch a bill belongs to (required by schema). */
+export function resolveBillBranchId({ bodyBranchId, userBranchId, customerBranchId }) {
+  const branchId = bodyBranchId || userBranchId || customerBranchId;
+  if (!branchId) {
+    throw new Error('Branch is required. Select a branch or pick a customer that belongs to a branch.');
+  }
+  return branchId;
+}
+
+/** List filter — include bills tagged to the branch or for customers at that branch. */
+export function billListWhere(branchFilter = {}) {
+  if (!branchFilter.branchId) return {};
+  return {
+    OR: [
+      { branchId: branchFilter.branchId },
+      { customer: { branchId: branchFilter.branchId } },
+    ],
+  };
+}
+
 async function deductStockForBillItems({ billId, billNo, branchId, items, createdById }) {
   for (const item of items) {
     if (item.itemType !== 'PRODUCT') continue;
@@ -133,6 +153,8 @@ export async function createStandardBill({
     branchId,
     items: bill.items,
     createdById,
+  }).catch((err) => {
+    console.warn(`Bill ${billNo}: stock deduction skipped — ${err.message}`);
   });
 
   await syncBillLedgers(bill.id, createdById);
