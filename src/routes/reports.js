@@ -54,6 +54,43 @@ router.get('/sales', requirePermission('reports.sales'), async (req, res) => {
   });
 });
 
+router.get('/sales/export', requirePermission('reports.sales'), async (req, res) => {
+  const period = parseReportPeriod(req.query);
+  const branchId = req.query.branchId;
+  const bills = await prisma.bill.findMany({
+    where: {
+      ...branchWhere(req.branchFilter, branchId),
+      billDate: { gte: period.from, lte: period.to },
+      status: { notIn: ['CANCELLED', 'DRAFT'] },
+    },
+    include: { customer: true, branch: true },
+    orderBy: { billDate: 'desc' },
+  });
+
+  const lines = [
+    ['Bill No', 'Date', 'Customer', 'UHID', 'Branch', 'Total', 'Paid', 'Balance', 'Status', 'Payment Mode'].join(','),
+    ...bills.map((b) => [
+      b.billNo,
+      b.billDate?.toISOString?.().slice(0, 10) || '',
+      `${b.customer?.firstName || ''} ${b.customer?.lastName || ''}`.trim(),
+      b.customer?.uhid || '',
+      b.branch?.name || '',
+      b.totalAmount,
+      b.paidAmount,
+      b.balanceAmount,
+      b.status,
+      b.paymentMode || '',
+    ].map((v) => {
+      const s = v == null ? '' : String(v);
+      return s.includes(',') ? `"${s.replace(/"/g, '""')}"` : s;
+    }).join(',')),
+  ];
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="sales-report.csv"');
+  res.send(lines.join('\n'));
+});
+
 router.get('/customers', requirePermission('reports.customers'), async (req, res) => {
   const customers = await prisma.customer.findMany({
     where: req.branchFilter,

@@ -16,6 +16,10 @@ function erpShell(opts = {}) {
         if (e.detail.target?.id === 'erp-modal-body' && window.Alpine) {
           Alpine.initTree(e.detail.target);
         }
+        if (e.detail.target?.id === 'erp-modal-body' && document.getElementById('bill-form')) {
+          window.billCalculator?.reset();
+          window.initBillingCreateForm?.();
+        }
         document.querySelectorAll('[data-currency]').forEach((el) => {
           if (el.dataset.currencyBound) return;
           el.dataset.currencyBound = '1';
@@ -28,6 +32,17 @@ function erpShell(opts = {}) {
 
       document.body.addEventListener('htmx:responseError', () => {
         this.showToast({ type: 'error', message: 'Something went wrong. Please try again.' });
+      });
+
+      document.body.addEventListener('htmx:beforeRequest', (e) => {
+        const form = e.detail.elt?.closest?.('#bill-form') || (e.detail.elt?.id === 'bill-form' ? e.detail.elt : null);
+        if (!form) return;
+        window.billCalculator?.render();
+        const items = JSON.parse(document.getElementById('bill-items-json')?.value || '[]');
+        if (!items.length) {
+          e.preventDefault();
+          this.showToast({ type: 'error', message: 'Add at least one line item before creating the bill.' });
+        }
       });
     },
     setModule(id) {
@@ -107,6 +122,10 @@ document.querySelectorAll('[data-currency]').forEach((el) => {
 
 window.billCalculator = {
   items: [],
+  reset() {
+    this.items = [];
+    this.render();
+  },
   async addItem(item, customerCategory) {
     try {
       const res = await fetch('/billing/preview-discount', {

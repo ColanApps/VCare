@@ -286,6 +286,7 @@ const DEDICATED_WORKFLOW_PATHS = new Set([
   '/purchase/aesthetics/grn/search', '/purchase/aesthetics/invoices', '/purchase/aesthetics/orders/authorize',
   '/purchase/factory/indents', '/purchase/factory/indents/search', '/purchase/factory/inward',
   '/purchase/factory/inward/search', '/purchase/factory/inward/quality', '/purchase/factory/inward/report',
+  '/purchase/asset-po', '/purchase/asset-po/form',
   '/purchase/asset-po/search', '/purchase/asset-po/authorize', '/purchase/asset-grn',
   '/portal/branch-manager', '/portal/warehouse',
 ]);

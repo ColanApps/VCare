@@ -124,7 +124,7 @@ router.get('/create', requirePermission('billing.create'), async (req, res) => {
     title: 'Bill Details',
     activeModule: 'billing',
     bills,
-    pagination: buildPagination(page, limit, total),
+    pagination: buildPagination(total, page, limit),
     filters: { q: '', status: '' },
     autoOpenModal: { title: 'Create Bill', size: 'full', url: '/billing/create' },
   });
@@ -144,6 +144,9 @@ router.post('/create', requirePermission('billing.create'), async (req, res) => 
     await assertDateNotLocked(branchId, new Date(), 'create bills');
     const customer = await prisma.customer.findUnique({ where: { id: req.body.customerId } });
     const rawItems = JSON.parse(req.body.items || '[]');
+    if (!rawItems.length) {
+      throw new Error('Add at least one line item to the bill.');
+    }
 
     const { bill, billNo, installmentRate, installmentTenure } = await createStandardBill({
       customerId: req.body.customerId,
@@ -561,24 +564,36 @@ router.get('/:id', requirePermission('billing.view'), async (req, res) => {
   });
 });
 
-router.post('/:id/payment', requirePermission('billing.payments'), async (req, res) => {
-  const bill = await prisma.bill.findUnique({ where: { id: req.params.id } });
-  const amount = parseFloat(req.body.amount);
+router.post('/:id/payment', requirePermission('billing.payments', 'billing.create'), async (req, res) => {
+  try {
+    const bill = await prisma.bill.findUnique({ where: { id: req.params.id } });
+    if (!bill) {
+      req.session.flash = { type: 'error', message: 'Bill not found.' };
+      return res.redirect('/billing');
+    }
+    const amount = parseFloat(req.body.amount);
+    if (!amount || amount <= 0) {
+      throw new Error('Enter a valid payment amount.');
+    }
 
-  const { recordPayment } = await import('../services/paymentService.js');
-  const { payment } = await recordPayment({
-    billId: bill.id,
-    amount,
-    paymentMode: req.body.paymentMode,
-    referenceNo: req.body.referenceNo,
-    userId: req.session.user.id,
-  });
+    const { recordPayment } = await import('../services/paymentService.js');
+    const { payment } = await recordPayment({
+      billId: bill.id,
+      amount,
+      paymentMode: req.body.paymentMode,
+      referenceNo: req.body.referenceNo,
+      userId: req.session.user.id,
+    });
 
-  req.session.flash = { type: 'success', message: 'Payment recorded.' };
-  if (req.body.printReceipt === 'on') {
-    return res.redirect(`/finance/receipt/${payment.id}?print=1`);
+    req.session.flash = { type: 'success', message: 'Payment recorded.' };
+    if (req.body.printReceipt === 'on') {
+      return res.redirect(`/finance/receipt/${payment.id}?print=1`);
+    }
+    return res.redirect(`/billing/${bill.id}`);
+  } catch (err) {
+    req.session.flash = { type: 'error', message: err.message };
+    return res.redirect(`/billing/${req.params.id}`);
   }
-  res.redirect(`/billing/${bill.id}`);
 });
 
 router.post('/:id/installment-plan', requirePermission('billing.installments'), async (req, res) => {

@@ -232,6 +232,12 @@
 
   }
 
+  .erp-auth-visual--gradient {
+
+    @apply bg-gradient-to-br from-slate-800 via-brand-900 to-accent-800;
+
+  }
+
   .erp-auth-visual-img {
 
     @apply absolute inset-0 w-full h-full object-cover;

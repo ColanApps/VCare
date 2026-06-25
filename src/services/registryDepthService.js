@@ -23,7 +23,7 @@ const ENTITIES = {
   stockTransfer: { model: 'stockTransfer', field: 'transferNo', href: () => `/inventory/stock-transfers` },
   indent: { model: 'indent', field: 'indentNo', href: () => `/inventory/indents` },
   factoryIndent: { model: 'factoryIndent', field: 'indentNo', href: () => `/purchase/factory/indents` },
-  assetPurchaseOrder: { model: 'assetPurchaseOrder', field: 'apoNo', href: () => `/purchase/asset-orders` },
+  assetPurchaseOrder: { model: 'assetPurchaseOrder', field: 'apoNo', href: () => `/purchase/asset-po/search` },
   permanentRefund: { model: 'permanentRefund', field: 'refundNo', href: () => `/billing/permanent-refunds` },
   physicalAudit: { model: 'physicalStockAudit', field: 'auditNo', href: () => `/inventory/physical-stock` },
   iou: { model: 'iOURequest', field: 'requestNo', href: () => `/operations/iou` },
@@ -108,7 +108,12 @@ async function resolveEntityIds(entityKey, col, rows, secondaryCol) {
   return map;
 }
 
-function buildActionUrl(template, id, row) {
+function buildActionUrl(template, id, row, actionKey) {
+  if (actionKey === 'grn-qc' && id) {
+    if (row._grnType === 'AESTHETICS') return `/purchase/aesthetics/grn/${id}/quality`;
+    if (row._grnType === 'FACTORY') return `/purchase/factory/inward/${id}/quality`;
+    return `/purchase/grn/${id}/quality`;
+  }
   return template
     .replace('{{id}}', id)
     .replace('{{customerId}}', row._customerId || id)
@@ -163,7 +168,7 @@ export async function enrichScreenData(screen, data) {
             key: a,
             label: def.label,
             method: def.method,
-            url: buildActionUrl(def.url, id, row),
+            url: buildActionUrl(def.url, id, row, a),
             confirm: def.confirm,
             style: def.style || 'primary',
             needsAction: def.needsAction,

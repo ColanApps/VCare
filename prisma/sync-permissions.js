@@ -65,7 +65,7 @@ for (const role of roles) {
       continue;
     }
     const roleMap = {
-      BRANCH_MANAGER: ['billing.cancel', 'billing.refunds', 'inventory.clinical', 'master.discounts', 'billing.advances', 'billing.installments', 'billing.pharmacy', 'billing.pharmacy.b2b', 'billing.service.b2b', 'billing.maintenance', 'inventory.transfer', 'inventory.outward', 'sales.view', 'sales.create', 'sales.invoice', 'reports.branches', 'reports.inventory', 'reports.consultants', 'reports.incentives', 'master.reference', 'callcenter.view', 'callcenter.followup', 'customer.treatment', 'dashboard.biometric', 'dashboard.stock_inward', 'purchase.workorder', 'finance.view', 'finance.close.submit', 'portal.view'],
+      BRANCH_MANAGER: ['billing.cancel', 'billing.refunds', 'billing.payments', 'inventory.clinical', 'master.discounts', 'billing.advances', 'billing.installments', 'billing.pharmacy', 'billing.pharmacy.b2b', 'billing.service.b2b', 'billing.maintenance', 'inventory.transfer', 'inventory.outward', 'sales.view', 'sales.create', 'sales.invoice', 'reports.branches', 'reports.inventory', 'reports.consultants', 'reports.incentives', 'master.reference', 'callcenter.view', 'callcenter.followup', 'customer.treatment', 'dashboard.biometric', 'dashboard.stock_inward', 'purchase.workorder', 'finance.view', 'finance.close.submit', 'portal.view'],
       CONSULTANT: ['customer.treatment', 'portal.view', 'portal.consultant', 'reports.incentives', 'dashboard.biometric'],
       CALL_CENTER: ['callcenter.view', 'callcenter.followup'],
       ACCOUNTS: ['billing.cancel', 'billing.refunds', 'billing.advances', 'billing.loans', 'billing.installments', 'billing.pharmacy.b2b', 'billing.service.b2b', 'billing.maintenance', 'portal.view', 'portal.accounts', 'reports.branches', 'reports.consultants', 'sales.view', 'sales.invoice', 'reports.incentives', 'dashboard.biometric', 'finance.view', 'finance.close.approve', 'finance.incentives'],
@@ -83,12 +83,14 @@ for (const role of roles) {
   }
 }
 
-// Migrate legacy finance.close + BM billing.payments
+// Migrate legacy finance.close permission (billing.payments restored for branch managers)
 const bmRole = await prisma.role.findUnique({ where: { code: 'BRANCH_MANAGER' } });
 const paymentsPerm = await prisma.permission.findUnique({ where: { code: 'billing.payments' } });
 if (bmRole && paymentsPerm) {
-  await prisma.rolePermission.deleteMany({
-    where: { roleId: bmRole.id, permissionId: paymentsPerm.id },
+  await prisma.rolePermission.upsert({
+    where: { roleId_permissionId: { roleId: bmRole.id, permissionId: paymentsPerm.id } },
+    create: { roleId: bmRole.id, permissionId: paymentsPerm.id },
+    update: {},
   });
 }
 const legacyClose = await prisma.permission.findUnique({ where: { code: 'finance.close' } });

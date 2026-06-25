@@ -7,7 +7,7 @@ import { assertDateNotLocked } from './financeDayLockService.js';
 
 export function assertCreatePaymentAllowed(paidAmount, roleCode) {
   const paid = parseFloat(paidAmount) || 0;
-  if (paid > 0 && !['ACCOUNTS', 'SUPER_ADMIN'].includes(roleCode)) {
+  if (paid > 0 && !['ACCOUNTS', 'SUPER_ADMIN', 'BRANCH_MANAGER'].includes(roleCode)) {
     throw new Error('Only Accounts can record payment at bill creation. Create the bill with zero paid amount.');
   }
 }

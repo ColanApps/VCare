@@ -4,7 +4,7 @@
 {% from "partials/report-filters.njk" import reportPeriodFilter %}
 {% block content %}
 {% call pageToolbar('Sales Report', period.from | date ~ ' — ' ~ (period.to | date)) %}
-  <a href="/reports/sales/export" class="erp-btn-secondary text-sm">Export</a>
+  <a href="/reports/sales/export?month={{ period.month }}&year={{ period.year }}{% if filters.branchId %}&branchId={{ filters.branchId }}{% endif %}" class="erp-btn-secondary text-sm">Export</a>
 {% endcall %}
 {{ reportPeriodFilter('/reports/sales', period, branches) }}
 
