@@ -1,27 +1,30 @@
 #!/bin/sh
 set -e
 
-# Railway injects MYSQL_URL when MySQL is linked — Prisma needs DATABASE_URL
-if [ -z "$DATABASE_URL" ] && [ -n "$MYSQL_URL" ]; then
+echo "=== VCare Railway startup ==="
+
+# Railway provides MYSQL_URL; Prisma CLI only reads DATABASE_URL
+if [ -n "$DATABASE_URL" ]; then
+  echo "DATABASE_URL is set"
+elif [ -n "$MYSQL_URL" ]; then
   export DATABASE_URL="$MYSQL_URL"
-  echo "Using MYSQL_URL as DATABASE_URL"
-elif [ -z "$DATABASE_URL" ] && [ -n "$MYSQLUSER" ] && [ -n "$MYSQLPASSWORD" ] && [ -n "$MYSQLHOST" ]; then
+  echo "Copied MYSQL_URL → DATABASE_URL"
+elif [ -n "$MYSQLUSER" ] && [ -n "$MYSQLPASSWORD" ] && [ -n "$MYSQLHOST" ]; then
   MYSQLPORT="${MYSQLPORT:-3306}"
   MYSQLDATABASE="${MYSQLDATABASE:-railway}"
   export DATABASE_URL="mysql://${MYSQLUSER}:${MYSQLPASSWORD}@${MYSQLHOST}:${MYSQLPORT}/${MYSQLDATABASE}"
   echo "Built DATABASE_URL from MYSQL* variables"
-fi
-
-if [ -z "$DATABASE_URL" ]; then
+else
   echo ""
-  echo "ERROR: No database URL on this Railway service."
-  echo ""
-  echo "Fix (pick one):"
-  echo "  A) Link MySQL to this service (Railway adds MYSQL_URL automatically)"
-  echo "  B) Variables → DATABASE_URL = \${{MySQL.MYSQL_URL}}"
+  echo "ERROR: No database URL found on this service."
+  echo "On vcare-erp → Variables, add DATABASE_URL with your full mysql://... string"
+  echo "(copy the same value you used for MYSQL_URL)"
   echo ""
   exit 1
 fi
+
+# Prisma CLI loads .env from cwd — write it so db push always sees DATABASE_URL
+printf 'DATABASE_URL=%s\n' "$DATABASE_URL" > .env
 
 echo "Applying database schema..."
 npx prisma db push

@@ -35,6 +35,4 @@ RUN chmod +x scripts/railway-start.sh
 
 EXPOSE 3000
 
-# Migrations: run via Render pre-deploy command (needs DATABASE_URL there).
-# Do not run prisma here — env vars may be missing and it blocks every boot.
-CMD ["node", "src/server.js"]
+CMD ["sh", "scripts/railway-start.sh"]
